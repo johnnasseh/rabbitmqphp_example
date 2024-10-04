@@ -34,7 +34,7 @@ function doLogin($username, $password)
 	}
 }
 
-function requestProessor($request)
+function requestProcessor($request)
 {
 	echo "Received request".PHP_EOL;
 	var_dump($request);
@@ -52,10 +52,10 @@ function requestProessor($request)
 }
 
 // starting rabbitmq server. listening to auth_requests and responding to auth_responses
-$server = new rabbitMQServer("testRabbitMQ.ini", "auth_requests");
+$server = new rabbitMQServer("testRabbitMQ.ini", "testServer");
 
 echo "RabbitMQ Auth Server BEGIN".PHP_EOL;
-$server->process_requests('requestProcessor', "auth_responses");
+$server->process_requests('requestProcessor', "testServer");
 echo "RabbitMQ Auth Server END".PHP_EOL;
 exit();
 ?>
