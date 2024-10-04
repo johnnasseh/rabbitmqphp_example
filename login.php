@@ -3,9 +3,11 @@
 session_start();
 
 require_once "mysqlconnect.php";
-$mydb = getDB();
+require_once('path.inc');
+require_once('get_host_info.inc');
+require_once('rabbitMQLib.inc');
 
-$conn = new mysqli('192.168.194.225', 'dbconnect', 'IT490CONNECT225', 'IT490');
+$client = new rabbitMQClient("testRabbitMQ.ini", "auth_requests");
 
 if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
@@ -32,31 +34,23 @@ switch ($request["type"]) {
             $response = "Missing username or password.";
             break;
         }
+	$rabbitRequest = array();
+	$rabbitRequest['type'] = 'login';
+	$rabbitRequest['username'] = $request['uname'];
+	$rabbitRequest['password'] = $request['pword'];
 
-        $username = $conn->real_escape_string($request['uname']);
-        $password = $request['pword'];  
+	// sending requests to rabbitmq through queue
+	$response = $client->send_request($rabbitRequest, "auth_responses");
 
-        $sql = "SELECT * FROM users WHERE username='$username'";
-	$stmt = $mydb->prepare($sql);
-	$stmt->execute;
-	$result = $stmt->getresult();
-
-        if ($result->num_rows > 0) {
-           
-            $user = $result->fetch_assoc();
-            
-            if (password_verify($password, $user['password'])) {
+        if ($response['status'] == 'success') {
                 $_SESSION['loggedin'] = true;
-                $_SESSION['username'] = $user['username'];
-                $_SESSION['email'] = $user['email'];
-                $_SESSION['created'] = $user['created'];
-                $response = "Login successful! Welcome, " . $user['username'] . ".";
+                $_SESSION['username'] = $response['username'];
+                $_SESSION['email'] = $response['email'];
+                $_SESSION['created'] = $response['created'];
+                $response = "Login successful! Welcome, " . $response['username'] . ".";
             } else {
                 $response = "Login failed. Incorrect password.";
             }
-        } else {
-            $response = "Login failed. User does not exist.";
-        }
         break;
 
     case "logout":
@@ -76,7 +70,6 @@ switch ($request["type"]) {
 
 
 echo json_encode($response);
-$conn->close();  
 exit(0);
 ?>
 
