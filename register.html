@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register Page</title>
+    <script>
+	    // function for sanitizing user inputs. removes html tags and trims whitespace
+	            function sanitizeInput(input) {
+            return input.replace(/<[^>]*>/g, "").trim();
+        }
+        function onSubmitRegisterForm(event) {
+            event.preventDefault(); // prevents the page from reloading on submission
+		// gets and sanitized the values from the form fields
+            var username = sanitizeInput(document.getElementById("username").value);
+            var password = sanitizeInput(document.getElementById("password").value);
+            var email = sanitizeInput(document.getElementById("email").value);
+	//validating email format with regex
+	var emailPattern = /^[^ ]+@[^ ]+\.[a-z]{2,3}$/;
+	            if (!emailPattern.test(email)) {
+                document.getElementById("textResponse").innerHTML = "Please enter a valid email address.";
+                return;
+ 
+		    }
+		// xmlhttprequest to send reg data to register.php
+		           var request = new XMLHttpRequest();
+            request.open("POST", "register.php", true); // request type to post
+            request.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+		// callback function that runs when the request's state changes
+            request.onreadystatechange = function () {
+		    // when request is complete
+                if (this.readyState == 4) {
+			// if the request was successful
+                    if (this.status == 200) {
+			    // parse the json response
+                        var response = JSON.parse(this.responseText);
+			    // if success, store the JWT and redirect to login page
+                        if (response.status === "success") {
+                            localStorage.setItem('token', response.token);
+                            window.location.href = "index.html";
+                        } else {
+				// if reg failed, display error message
+                            document.getElementById("textResponse").innerHTML = response.message;
+                        }
+                    } else {
+                        document.getElementById("textResponse").innerHTML = "Error: Server returned status " + this.status;
+                    }
+                }
+            };
+	// sending the form data to the server in url-encoded format
+            request.send("uname=" + encodeURIComponent(username) + "&pword=" + encodeURIComponent(password) + "&email=" + encodeURIComponent(email));
+        }
+    </script>
+</head>
+<body>
+    <h1>Register Page</h1>
+
+    <form onsubmit="onSubmitRegisterForm(event)">
+        <label for="username">Username:</label>
+        <input type="text" id="username" name="uname" required><br><br>
+
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="pword" required><br><br>
+
+        <label for="email">Email:</label>
+        <input type="email" id="email" name="email" required><br><br>
+
+        <input type="submit" value="Register">
+    </form>
+
+    <div id="textResponse">
+        awaiting response...
+    </div>
+</body>
+</html>
+
