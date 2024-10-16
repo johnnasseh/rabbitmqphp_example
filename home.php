@@ -55,10 +55,37 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <title>Home</title>
 <script>
 function logout() {
-	// remove the token from localStorage and redirect to login
-		localStorage.removeItem("token");
+
+	const token = localStorage.getItem("token");
+
+	if (token) {
+		fetch('logout.php', {
+		method: 'POST',
+			headers: {
+			'Content-Type': 'application/x-www-form-urlencoded',
+		},
+			body: 'token=' + encodeURIComponent(token),
+		})
+		.then(response => response.json())
+		.then(data => {
+		if (data.status === "success") {
+			localStorage.removeItem("token");
+			window.location.href = "index.html";
+		} else {
+			console.error('Logout fialed:', data.message);
+		}
+	})
+		.catch(error => {
+		console.error('Error:', error);
+		});
+	}else {
 		window.location.href = "index.html";
 	}
+}
+//	// remove the token from localStorage and redirect to login
+//		localStorage.removeItem("token");
+//		window.location.href = "index.html";
+//	}
 // retreiving the token from localStorage
 window.onload = function(){
 	const token = localStorage.getItem("token");

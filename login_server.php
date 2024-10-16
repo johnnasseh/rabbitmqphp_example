@@ -3,17 +3,26 @@
 require_once('path.inc');
 require_once('get_host_info.inc');
 require_once('rabbitMQLib.inc');
-require_once "mysqlconnect.php";
+require_once("mysqlconnect.php");
+require 'vendor/autoload.php';
+
+use Firebase\JWT\JWT;
+
+$env = parse_ini_file('.env');
+
 
 $mydb = getDB();
+$jwt_key = $env['JWT_SECRET'];
 
+var_dump($jwt_key);
+var_dump($jwt);
 function doLogin($username, $password)
 {
-	global $mydb;
+	global $mydb, $jwt_key;
 
-	$username = $mydb->real_escape_string($username);
-	$sql = "SELECT * FROM Users WHERE username='$username'";
+	$sql = "SELECT * FROM Users WHERE username = ?";
 	$stmt = $mydb->prepare($sql);
+	$stmt->bind_param("s", $username);
 	$stmt->execute();
 	$result = $stmt->get_result();
 
@@ -21,8 +30,19 @@ function doLogin($username, $password)
 		$user = $result->fetch_assoc();
 
 		if (password_verify($password, $user['password'])) {
+			$payload = array(
+				"iss" => 'IT490',
+				"iat" => time(),
+				"exp" => time() + 3600,
+				"data" => array("username" => $user['username'],
+					"email" => $user['email'])
+			);
+
+				$jwt = JWT::encode($payload, $jwt_key, 'HS256');
+
 			return array(
 				"status" => "success",
+				"token" => $jwt, // return token
 				"username" => $user['username'],
 				"email" => $user['email']
 			);
