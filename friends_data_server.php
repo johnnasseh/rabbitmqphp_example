@@ -61,6 +61,6 @@ function getFriendsData($username) {
     ];
 }
 
-$server = new rabbitMQServer("testRabbitMQ.ini", "testServer");
+$server = new rabbitMQServer("testRabbitMQ.ini", "friendsMQ");
 $server->process_requests('requestProcessor');
 ?>

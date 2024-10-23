@@ -1,4 +1,4 @@
-<?php
+<?php:
 require_once('path.inc');
 require_once('get_host_info.inc');
 require_once('rabbitMQLib.inc');
@@ -14,7 +14,7 @@ error_reporting(E_ALL & ~E_DEPRECATED);
 $env = parse_ini_file('.env');
 $jwt_secret = $env['JWT_SECRET'];
 
-$client = new rabbitMQClient("testRabbitMQ.ini", "testServer");
+$client = new rabbitMQClient("testRabbitMQ.ini", "friendsMQ");
 
 // check if post
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
