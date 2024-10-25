@@ -1,6 +1,6 @@
 <?php
 require_once('vendor/autoload.php');
-
+require('nav.php');
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 
@@ -123,40 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
       </script>
 </head>
 <body>
-    <!-- NavBar -->
-    <nav class="navbar navbar-expand-lg bg-body-tertiary">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="#">EventPulse</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarSupportedContent">
-                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                    <li class="nav-item">
-                        <a class="nav-link active" aria-current="page" href="#">Home</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#">Profile</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#">Saved Events</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="friends.php">Friends</a>
-                    </li>
-                </ul>
-                <!-- Username and Logout Button -->
-                <div class="d-flex align-items-center">
-                    <span class="me-3">Welcome, <strong><?php echo htmlspecialchars($username); ?></strong></span>
-                    <form class="d-flex" role="button">
-                        <button class="btn btn-outline-danger" type="button" onclick="logout()">Logout</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </nav>
-
-    <!-- Centered Title, Search Bar, and Text -->
+     <!-- Centered Title, Search Bar, and Text -->
     <div class="container mt-5">
         <div class="row justify-content-center">
             <div class="col-md-8 text-center">
