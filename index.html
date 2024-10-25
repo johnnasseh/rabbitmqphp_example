@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Page</title>
+    <script>
+	    // function to handle the server's response after attempting login
+	function HandleLoginResponse(responseText) {
+        try {
+		// parse the server's response as JSON
+            var response = JSON.parse(responseText);
+            	// store the jwt and redirect to home if success
+            if (response.status === "success") {
+                // store jwt in localStoage
+                localStorage.setItem("token", response.token);
+		    // redirect to home if usccesful
+		window.location.href = "home.php";    
+            } else {
+                document.getElementById("textResponse").innerHTML = "Error: " + response.message;
+            }
+        } catch (error) {
+            document.getElementById("textResponse").innerHTML = "Error: Invalid response from the server.";
+            console.error("Error parsing response: ", error);
+        }
+   }
+	    // function to send the login request to the server
+    function SendLoginRequest(username, password) {
+	    // create a xmlhttprequest object to communicate with the server
+        var request = new XMLHttpRequest();
+        request.open("POST", "login.php", true); // send the form data to login.php
+        request.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+        request.onreadystatechange = function () {
+		// if request is complete and server responded with an ok
+            if (this.readyState == 4 && this.status == 200) {
+		    // handle the server's response
+                HandleLoginResponse(this.responseText); 
+            } else if (this.readyState == 4 && this.status != 200) {
+                document.getElementById("textResponse").innerHTML = "Error: Server returned status " + this.status;
+            }
+        };
+	    // log data being sent for debugging
+        console.log("Sending data: ", "uname=" + encodeURIComponent(username) + "&pword=" + encodeURIComponent(password));
+	    // send the username and password as URL encoded form data
+        request.send("uname=" + encodeURIComponent(username) + "&pword=" + encodeURIComponent(password));
+    }
+	// function to handle form submission
+    function onSubmitLoginForm(event) {
+        event.preventDefault();  // prevent page reload
+	    // retreive username and password from form frields
+        var username = document.getElementById("username").value;
+        var password = document.getElementById("password").value;
+	    // send login requests with user and pw
+        SendLoginRequest(username, password);
+    }
+	    // redirect to register page when they hit the button
+        function onRegister() {
+            window.location.href = "register.html"; // Redirect to the register page
+        }
+    </script>
+</head>
+<body>
+    <h1>Login Page</h1>
+
+    <!-- Login form that submits to login.php -->
+    <form onsubmit="onSubmitLoginForm(event)">
+        <label for="username">Username:</label>
+        <input type="text" id="username" name="uname" required><br><br>
+
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="pword" required><br><br>
+
+        <input type="submit" value="Login">
+    </form>
+
+    <!-- Register button -->
+    <button onclick="onRegister()">Register</button>
+
+    <div id="textResponse">
+        awaiting response...
+    </div>
+</body>
+</html>
+
