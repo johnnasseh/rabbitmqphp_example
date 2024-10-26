@@ -1,3 +1,4 @@
+#!/usr/bin/php
 <?php
 require_once('path.inc');
 require_once('get_host_info.inc');
@@ -9,9 +10,13 @@ function requestProcessor($request) {
         return ["status" => "error", "message" => "Invalid request"];
     }
 
-    // process the 'get_friends_data' request
+    // process the 'get_freinds_data' request
     if ($request['type'] === 'get_friends_data') {
         return getFriendsData($request['username']);
+    }
+
+    if ($request['type'] === 'search_users') {
+        return searchUsers($request['search_username']);
     }
 
     return ["status" => "error", "message" => "Unknown request type"];
@@ -42,7 +47,7 @@ function getFriendsData($username) {
         $pendingRequests[] = $row['requested_username'];
     }
 
-    //query for incoming friend requests
+    // query for incoming friend requests
     $incomingQuery = $db->prepare("SELECT username FROM FriendRequests WHERE requested_username = ? AND status = 'pending'");
     $incomingQuery->bind_param('s', $username);
     $incomingQuery->execute();
@@ -61,6 +66,25 @@ function getFriendsData($username) {
     ];
 }
 
-$server = new rabbitMQServer("testRabbitMQ.ini", "friendsMQ");
+function searchUsers($searchUsername) {
+    $db = getDB();
+
+    // query for searching users
+    $query = $db->prepare("SELECT username FROM Users WHERE username LIKE CONCAT('%', ?, '%') LIMIT 10");
+    $query->bind_param('s', $searchUsername);
+    $query->execute();
+    $result = $query->get_result();
+
+    $users = [];
+    while ($row = $result->fetch_assoc()) {
+        $users[] = $row;
+    }
+
+    return [
+        "status" => "success",
+        "users" => $users
+    ];
+}
+
+$server = new rabbitMQServer("testRabbitMQ.ini","friendsMQ");
 $server->process_requests('requestProcessor');
-?>
