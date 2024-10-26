@@ -2,7 +2,7 @@
 require_once('path.inc');
 require_once('get_host_info.inc');
 require_once('rabbitMQLib.inc');
-require_once('mysqlconnect.php'); 
+require_once('mysqlconnect.php');
 
 function requestProcessor($request) {
     if (!isset($request['type'])) {
@@ -42,7 +42,7 @@ function getFriendsData($username) {
         $pendingRequests[] = $row['requested_username'];
     }
 
-    // query for incoming friend requests
+    //query for incoming friend requests
     $incomingQuery = $db->prepare("SELECT username FROM FriendRequests WHERE requested_username = ? AND status = 'pending'");
     $incomingQuery->bind_param('s', $username);
     $incomingQuery->execute();
@@ -61,6 +61,6 @@ function getFriendsData($username) {
     ];
 }
 
-$server = new rabbitMQServer("testRabbitMQ.ini", "testServer");
+$server = new rabbitMQServer("testRabbitMQ.ini", "friendsMQ");
 $server->process_requests('requestProcessor');
 ?>
