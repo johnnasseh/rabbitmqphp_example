@@ -49,6 +49,26 @@ if ($token) {
     echo json_encode(["status" => "fail", "message" => "Token not provided"]);
     exit;
 }
+
+if (isset($_POST['search_username'])) {
+    $searchUsername = $_POST['search_username'];
+    
+    // search request for rabbit
+    $rabbitRequest = [
+        'type' => 'search_users',
+        'search_username' => $searchUsername,
+    ];
+
+    // send request to rabbit and get response
+    $searchResponse = $client->send_request($rabbitRequest, "search_users_responses");
+
+    if ($searchResponse['status'] === 'success') {
+        echo json_encode(['status' => 'success', 'users' => $searchResponse['users']]);
+    } else {
+        echo json_encode(['status' => 'fail', 'message' => 'User not found']);
+    }
+    exit;
+}
 ?>
 
 <!DOCTYPE html>
@@ -82,12 +102,55 @@ if ($token) {
             })
             .catch(error => console.error('Error:', error));
         }
+
+        function searchUsers() {
+            const searchUsername = document.getElementById("searchUsername").value;
+            const token = localStorage.getItem("token");
+
+            fetch("friends.php", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: `token=${encodeURIComponent(token)}&search_username=${encodeURIComponent(searchUsername)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === "success") {
+                    displaySearchResults(data.users);
+                } else {
+                    alert("User not found");
+                }
+            })
+            .catch(error => console.error("Error:", error));
+        }
+
+        function displaySearchResults(users) {
+            const resultsContainer = document.getElementById("searchResults");
+            resultsContainer.innerHTML = ""; 
+            
+            users.forEach(user => {
+                const result = document.createElement("li");
+                result.classList.add("list-group-item");
+                result.innerHTML = `
+                    ${user.username}
+                    <button class="btn btn-primary btn-sm float-right" onclick="handleFriendRequest('${user.username}', 'send_request')">Send Friend Request</button>
+                `;
+                resultsContainer.appendChild(result);
+            });
+        }
     </script>
 </head>
 <body>
     <?php include('nav.php'); ?>
     <div class="container mt-5">
         <h1>Friends</h1>
+
+        <h2>Search for Users</h2>
+        <div class="form-group">
+            <input type="text" id="searchUsername" class="form-control" placeholder="Enter username to search">
+            <button class="btn btn-primary mt-2" onclick="searchUsers()">Search</button>
+        </div>
+
+        <ul class="list-group" id="searchResults"></ul>
 
         <h2>Incoming Friend Requests</h2>
         <ul class="list-group">
