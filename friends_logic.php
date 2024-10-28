@@ -3,74 +3,67 @@ require_once('path.inc');
 require_once('get_host_info.inc');
 require_once('rabbitMQLib.inc');
 require_once('vendor/autoload.php');
+require_once('mysqlconnect.php');
 
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL & ~E_DEPRECATED);
-
 $env = parse_ini_file('.env');
 $jwt_secret = $env['JWT_SECRET'];
 
-$client = new rabbitMQClient("testRabbitMQ.ini", "friendsMQ");
-
 $token = $_POST['token'] ?? '';
-$friends = [];
-$pendingRequests = [];
-$incomingRequests = [];
 
 if ($token) {
     try {
-        // Decode token to get username
         $decoded = JWT::decode($token, new Key($jwt_secret, 'HS256'));
         $username = $decoded->data->username;
 
-        // Prepare the request for rabbit
-        $rabbitRequest = [
-            'type' => 'get_friends_data',
-            'username' => $username,
-        ];
+        $db = getDB();
 
-        // Send request to rabbit and get the response
-        $response = $client->send_request($rabbitRequest, "friends_data_responses");
-
-        if ($response['status'] === 'success') {
-            $friends = $response['friends'];
-            $pendingRequests = $response['pendingRequests'];
-            $incomingRequests = $response['incomingRequests'];
-        } else {
-            echo json_encode(["status" => "fail", "message" => $response['message']]);
-            exit;
+        // Fetch incoming friend requests
+        $incomingQuery = $db->prepare("SELECT username FROM FriendRequests WHERE requested_username = ? AND status = 'pending'");
+        $incomingQuery->bind_param('s', $username);
+        $incomingQuery->execute();
+        $incomingResult = $incomingQuery->get_result();
+        $incomingRequests = [];
+        while ($row = $incomingResult->fetch_assoc()) {
+            $incomingRequests[] = $row['username'];
         }
+        error_log("Incoming Requests: " . json_encode($incomingRequests));
+
+        // Fetch pending friend requests
+        $pendingQuery = $db->prepare("SELECT requested_username FROM FriendRequests WHERE username = ? AND status = 'pending'");
+        $pendingQuery->bind_param('s', $username);
+        $pendingQuery->execute();
+        $pendingResult = $pendingQuery->get_result();
+        $pendingRequests = [];
+        while ($row = $pendingResult->fetch_assoc()) {
+            $pendingRequests[] = $row['requested_username'];
+        }
+        error_log("Pending Requests: " . json_encode($pendingRequests));
+
+        // Fetch friends list
+        $friendsQuery = $db->prepare("SELECT friend_username FROM Friends WHERE username = ?");
+        $friendsQuery->bind_param('s', $username);
+        $friendsQuery->execute();
+        $friendsResult = $friendsQuery->get_result();
+        $friends = [];
+        while ($row = $friendsResult->fetch_assoc()) {
+            $friends[] = $row['friend_username'];
+        }
+        error_log("Friends: " . json_encode($friends));
+
+        // Return all data
+        echo json_encode([
+            'status' => 'success',
+            'incomingRequests' => $incomingRequests,
+            'pendingRequests' => $pendingRequests,
+            'friends' => $friends
+        ]);
     } catch (Exception $e) {
-        echo json_encode(["status" => "fail", "message" => "Invalid or expired token"]);
-        exit;
+        echo json_encode(['status' => 'fail', 'message' => 'Invalid or expired token']);
     }
 } else {
-    echo json_encode(["status" => "fail", "message" => "Token not provided"]);
-    exit;
+    echo json_encode(['status' => 'fail', 'message' => 'Missing token']);
 }
-
-// Handle user search
-if (isset($_POST['search_username'])) {
-    $searchUsername = $_POST['search_username'];
-
-    // Search request for rabbit
-    $rabbitRequest = [
-        'type' => 'search_users',
-        'search_username' => $searchUsername,
-    ];
-
-    // Send request to rabbit and get response
-    $searchResponse = $client->send_request($rabbitRequest, "search_users_responses");
-
-    if ($searchResponse['status'] === 'success') {
-        echo json_encode(['status' => 'success', 'users' => $searchResponse['users']]);
-        exit;
-    } else {
-        echo json_encode(['status' => 'fail', 'message' => 'User not found']);
-        exit;
-    }
-}
+?>
