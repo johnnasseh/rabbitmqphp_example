@@ -6,6 +6,78 @@
     <title>Friends</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
     <script>
+        function fetchFriendData() {
+            console.log("Fetching updated data...");
+            const token = localStorage.getItem("token");
+            if (!token) {
+                alert("You must be logged in to view friend requests.");
+                return;
+            }
+
+            fetch('friends_logic.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `token=${encodeURIComponent(token)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log("Received data:", data);
+                if (data.status === 'success') {
+                    displayIncomingRequests(data.incomingRequests);
+                    displayPendingRequests(data.pendingRequests);
+                    displayFriends(data.friends);
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        function displayIncomingRequests(incomingRequests) {
+            console.log("Displaying incoming requests:", incomingRequests);
+            const incomingList = document.getElementById('incomingRequests');
+            incomingList.innerHTML = '';
+            if (incomingRequests.length > 0) {
+                incomingRequests.forEach(request => {
+                    incomingList.innerHTML += `<li class="list-group-item d-flex justify-content-between align-items-center">
+                        ${request}
+                        <div>
+                            <button class="btn btn-success btn-sm" onclick="handleFriendRequest('${request}', 'accept')">Accept</button>
+                            <button class="btn btn-danger btn-sm" onclick="handleFriendRequest('${request}', 'decline')">Decline</button>
+                        </div>
+                    </li>`;
+                });
+            } else {
+                incomingList.innerHTML = '<li class="list-group-item">No incoming requests</li>';
+            }
+        }
+
+        function displayPendingRequests(pendingRequests) {
+            console.log("Displaying pending requests:", pendingRequests);
+            const pendingList = document.getElementById('pendingRequests');
+            pendingList.innerHTML = '';
+            if (pendingRequests.length > 0) {
+                pendingRequests.forEach(request => {
+                    pendingList.innerHTML += `<li class="list-group-item">${request}</li>`;
+                });
+            } else {
+                pendingList.innerHTML = '<li class="list-group-item">No pending requests</li>';
+            }
+        }
+
+        function displayFriends(friends) {
+            console.log("Displaying friends list:", friends);
+            const friendsList = document.getElementById('friendsList');
+            friendsList.innerHTML = '';
+            if (friends.length > 0) {
+                friends.forEach(friend => {
+                    friendsList.innerHTML += `<li class="list-group-item">${friend}</li>`;
+                });
+            } else {
+                friendsList.innerHTML = '<li class="list-group-item">You have no friends added yet</li>';
+            }
+        }
+
         function handleFriendRequest(friendUsername, action) {
             const token = localStorage.getItem("token");
             if (!token) {
@@ -22,45 +94,41 @@
             .then(data => {
                 if (data.status === "success") {
                     alert(data.message);
-                    location.reload();
+                    fetchFriendData(); // Refresh friend requests and friends list after action
                 } else {
                     alert("Failed to handle request: " + data.message);
                 }
             })
             .catch(error => console.error('Error:', error));
         }
-        
-        function searchUsers() {
+
+        function sendFriendRequest() {
             const token = localStorage.getItem("token");
-            const searchUsername = document.getElementById('searchInput').value;
+            const friendUsername = document.getElementById('searchInput').value;
             if (!token) {
-                alert("You must be logged in to search for users.");
+                alert("You must be logged in to send friend requests.");
                 return;
             }
 
-            fetch('friends_logic.php', {
+            fetch('handle_friend_request.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `token=${encodeURIComponent(token)}&search_username=${encodeURIComponent(searchUsername)}`
+                body: `token=${encodeURIComponent(token)}&friend_username=${encodeURIComponent(friendUsername)}&action=send_request`
             })
             .then(response => response.json())
             .then(data => {
                 if (data.status === 'success') {
-                    const users = data.users;
-                    let userList = "<ul class='list-group'>";
-                    users.forEach(user => {
-                        userList += `<li class='list-group-item d-flex justify-content-between align-items-center'>
-                            ${user} <button class='btn btn-primary btn-sm' onclick="handleFriendRequest('${user}', 'send_request')">Send Request</button>
-                        </li>`;
-                    });
-                    userList += "</ul>";
-                    document.getElementById('searchResults').innerHTML = userList;
+                    alert(data.message);
+                    fetchFriendData(); // Refresh friend requests and friends list after sending request
                 } else {
                     alert(data.message);
                 }
             })
             .catch(error => console.error('Error:', error));
         }
+
+        // Call fetchFriendData on page load
+        window.onload = fetchFriendData;
     </script>
 </head>
 <body>
@@ -68,51 +136,20 @@
     <div class="container mt-5">
         <h1>Friends</h1>
 
-        <h2>Search for Users</h2>
+        <h2>Send Friend Request</h2>
         <div class="form-group">
             <input type="text" id="searchInput" class="form-control" placeholder="Enter username">
-            <button class="btn btn-primary mt-2" onclick="searchUsers()">Search</button>
+            <button class="btn btn-primary mt-2" onclick="sendFriendRequest()">Send Request</button>
         </div>
-        <div id="searchResults"></div>
 
         <h2>Incoming Friend Requests</h2>
-        <ul class="list-group">
-            <?php if (!empty($incomingRequests)) : ?>
-                <?php foreach ($incomingRequests as $request) : ?>
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <?php echo htmlspecialchars($request); ?>
-                        <div>
-                            <button class="btn btn-success btn-sm" onclick="handleFriendRequest('<?php echo $request; ?>', 'accept')">Accept</button>
-                            <button class="btn btn-danger btn-sm" onclick="handleFriendRequest('<?php echo $request; ?>', 'decline')">Decline</button>
-                        </div>
-                    </li>
-                <?php endforeach; ?>
-            <?php else : ?>
-                <li class="list-group-item">No incoming requests</li>
-            <?php endif; ?>
-        </ul>
+        <ul class="list-group" id="incomingRequests"></ul>
 
         <h2>Pending Friend Requests</h2>
-        <ul class="list-group">
-            <?php if (!empty($pendingRequests)) : ?>
-                <?php foreach ($pendingRequests as $request) : ?>
-                    <li class="list-group-item"><?php echo htmlspecialchars($request); ?></li>
-                <?php endforeach; ?>
-            <?php else : ?>
-                <li class="list-group-item">No pending requests</li>
-            <?php endif; ?>
-        </ul>
+        <ul class="list-group" id="pendingRequests"></ul>
 
         <h2>Friends List</h2>
-        <ul class="list-group">
-            <?php if (!empty($friends)) : ?>
-                <?php foreach ($friends as $friend) : ?>
-                    <li class="list-group-item"><?php echo htmlspecialchars($friend); ?></li>
-                <?php endforeach; ?>
-            <?php else : ?>
-                <li class="list-group-item">You have no friends added yet</li>
-            <?php endif; ?>
-        </ul>
+        <ul class="list-group" id="friendsList"></ul>
     </div>
 </body>
 </html>
