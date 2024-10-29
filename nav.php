@@ -1,3 +1,6 @@
+<?php
+require_once("get_url.php");
+?>
 <!-- nav.php -->
 <nav class="navbar navbar-expand-lg bg-body-tertiary">
     <div class="container-fluid">
@@ -9,7 +12,11 @@
             <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                 <li class="nav-item">
                     <a class="nav-link active" aria-current="page" href="#">Home</a>
+		</li>
+                <li class="nav-item">
+		<a class="nav-link" href="<?php echo get_url('/search.php'); ?>">Search</a>
                 </li>
+
                 <li class="nav-item">
                     <a class="nav-link" href="#">Profile</a>
                 </li>
@@ -56,29 +63,4 @@ function logout() {
     }
 }
 
-window.onload = function() {
-    const token = localStorage.getItem("token");
-    if (!token) {
-        window.location.href = "index.html";
-    } else {
-        fetch('home.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: 'token=' + encodeURIComponent(token),
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === "fail") {
-                document.getElementById("content").innerHTML = "<h1>Error: " + data.message + "</h1>";
-            } else {
-                // no welcome message displayed in the navbar
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            document.body.innerHTML = "<h1>Error: unable to verify token<h1>";
-        });
-    }
-}
 </script>
-
