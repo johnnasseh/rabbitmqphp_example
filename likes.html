@@ -1,0 +1,79 @@
+<?php
+require('nav.php');
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Liked Events</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <script>
+        window.onload = function() {
+            const token = localStorage.getItem("token");
+            if (!token) {
+                alert("You must be logged in to view liked events.");
+                window.location.href = "index.html";
+            } else {
+                fetchLikedEvents();
+            }
+        };
+
+        function fetchLikedEvents() {
+            const token = localStorage.getItem("token");
+
+            fetch('get_likes.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `token=${encodeURIComponent(token)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    displayLikedEvents(data.likedEvents);
+                } else {
+                    alert("Failed to load liked events: " + data.message);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        function displayLikedEvents(events) {
+            const eventsContainer = document.getElementById('likedEvents');
+            eventsContainer.innerHTML = '';
+            if (events.length > 0) {
+                events.forEach(event => {
+                    eventsContainer.innerHTML += `
+                        <div class="card mb-3" style="width: 100%;">
+                            <div class="row no-gutters">
+                                <div class="col-md-4">
+                                    <img src="${event.thumbnail}" class="card-img" alt="${event.title}">
+                                </div>
+                                <div class="col-md-8">
+                                    <div class="card-body">
+                                        <h5 class="card-title">${event.title}</h5>
+                                        <p class="card-text"><strong>Date:</strong> ${event.date_start}</p>
+                                        <p class="card-text"><strong>Time:</strong> ${event.time_start}</p>
+                                        <p class="card-text"><strong>Location:</strong> ${event.location}</p>
+                                        <p class="card-text">${event.description}</p>
+                                        <a href="${event.link}" target="_blank" class="btn btn-primary">Get Tickets</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
+                eventsContainer.innerHTML = '<p>No liked events found.</p>';
+            }
+        }
+    </script>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1>Liked Events</h1>
+        <div id="likedEvents"></div>
+    </div>
+</body>
+</html>
+
