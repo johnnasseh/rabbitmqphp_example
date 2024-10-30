@@ -1,3 +1,4 @@
+#!/usr/bin/php
 <?php
 require_once('path.inc');
 require_once('get_host_info.inc');
@@ -10,18 +11,24 @@ function requestProcessor($request) {
         return ["status" => "error", "message" => "Invalid request"];
     }
 
-    // used to check log type during debugging
+    // debugging for request types
     error_log("Processing request type: " . $request['type']);
 
-    if ($request['type'] === 'get_friends_data') {
-        return getFriendsData($request['username']);
+    switch ($request['type']) {
+        case 'get_friends_data':
+            return getFriendsData($request['username']);
+        case 'search_users':
+            return searchUsers($request['search_username']);
+        case 'send_request':
+            return sendFriendRequest($request['username'], $request['friend_username']);
+        case 'accept':
+            return acceptFriendRequest($request['username'], $request['friend_username']);
+        case 'decline':
+            return declineFriendRequest($request['username'], $request['friend_username']);
+        default:
+            error_log("Unknown request type: " . $request['type']);
+            return ["status" => "error", "message" => "Unknown request type"];
     }
-
-    if ($request['type'] === 'search_users') {
-        return searchUsers($request['search_username']);
-    }
-
-    return ["status" => "error", "message" => "Unknown request type"];
 }
 
 function getFriendsData($username) {
@@ -51,7 +58,7 @@ function getFriendsData($username) {
     }
     error_log("Pending Requests for $username: " . json_encode($pendingRequests));
 
-    // retrieve incoming friend requests
+    // retrieves incoming friend requests
     $incomingQuery = $db->prepare("SELECT username FROM FriendRequests WHERE requested_username = ? AND status = 'pending'");
     $incomingQuery->bind_param('s', $username);
     $incomingQuery->execute();
@@ -82,7 +89,7 @@ function searchUsers($searchUsername) {
 
     $users = [];
     while ($row = $result->fetch_assoc()) {
-        $users[] = $row;
+        $users[] = $row['username'];
     }
     error_log("User search for '$searchUsername' returned: " . json_encode($users));
 
@@ -92,6 +99,58 @@ function searchUsers($searchUsername) {
     ];
 }
 
+function sendFriendRequest($username, $friendUsername) {
+    $db = getDB();
+    $query = $db->prepare("INSERT INTO FriendRequests (username, requested_username, status) VALUES (?, ?, 'pending')");
+    $query->bind_param('ss', $username, $friendUsername);
+
+    if ($query->execute()) {
+        return ["status" => "success", "message" => "Friend request sent"];
+    } else {
+        error_log("Error sending friend request: " . $query->error);
+        return ["status" => "fail", "message" => "Failed to send friend request"];
+    }
+}
+
+function acceptFriendRequest($username, $friendUsername) {
+    $db = getDB();
+    
+    // updates friend request to accepted
+    $updateRequest = $db->prepare("UPDATE FriendRequests SET status = 'accepted' WHERE username = ? AND requested_username = ?");
+    $updateRequest->bind_param('ss', $friendUsername, $username);
+    
+    // inserts to friends list both ways
+    $insertFriend1 = $db->prepare("INSERT INTO Friends (username, friend_username) VALUES (?, ?)");
+    $insertFriend2 = $db->prepare("INSERT INTO Friends (username, friend_username) VALUES (?, ?)");
+    $insertFriend1->bind_param('ss', $username, $friendUsername);
+    $insertFriend2->bind_param('ss', $friendUsername, $username);
+
+    if ($updateRequest->execute() && $insertFriend1->execute() && $insertFriend2->execute()) {
+        return ["status" => "success", "message" => "Friend request accepted"];
+    } else {
+        error_log("Error accepting friend request: " . $updateRequest->error . " | " . $insertFriend1->error . " | " . $insertFriend2->error);
+        return ["status" => "fail", "message" => "Failed to accept friend request"];
+    }
+}
+
+function declineFriendRequest($username, $friendUsername) {
+    $db = getDB();
+    
+    // updates friend request to declined
+    $declineRequest = $db->prepare("UPDATE FriendRequests SET status = 'declined' WHERE username = ? AND requested_username = ?");
+    $declineRequest->bind_param('ss', $friendUsername, $username);
+
+    if ($declineRequest->execute()) {
+        return ["status" => "success", "message" => "Friend request declined"];
+    } else {
+        error_log("Error declining friend request: " . $declineRequest->error);
+        return ["status" => "fail", "message" => "Failed to decline friend request"];
+    }
+}
+
+// initializes rabbit server
 $server = new rabbitMQServer("testRabbitMQ.ini", "friendsMQ");
+error_log("Starting RabbitMQ server on friendsMQ queue...");
 $server->process_requests('requestProcessor');
+error_log("RabbitMQ server processing completed.");
 ?>
