@@ -9,40 +9,83 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL & ~E_DEPRECATED);
 
-$env = parse_ini_file('.env');
+use Firebase\JWT\JWT;
+use Firebase\JWT\Key;
 
+$env = parse_ini_file('.env');
+$jwt_secret = $env['JWT_SECRET'] ?? '';
 $client = new rabbitMQClient("testRabbitMQ.ini", "searchMQ");
 
-
-
-
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $query = $_POST['query'] ?? '';
-    
-    if (!$query) {
-        echo json_encode(["status" => "fail", "message" => "Search query not provided"]);
+    $type = $_POST['type'] ?? '';
+    $token = $_POST['token'] ?? '';
+
+    if (!$token) {
+        echo json_encode(["status" => "fail", "message" => "Token not provided"]);
         exit;
     }
 
-    error_log("Received search query in search_sender: " . $query);
-    
-    $rabbitRequest = [
-        'type' => 'search',
-       'query' => $query
-    ];
     try {
-     
-        $response = $client->send_request($rabbitRequest);
+        // Decode JWT token to get username
+	    $decoded = JWT::decode($token, new Key($jwt_secret, 'HS256'));
+	    $username = $decoded->data->username;
+    } catch (Exception $e) {
+        echo json_encode(["status" => "fail", "message" => "Invalid or expired token"]);
+        exit;
+    }
+    $response = ["status" => "fail", "message" => "Invalid request"];
 
-               if (isset($response['status']) && $response['status'] === 'success') {
-            echo json_encode(["status" => "success", "data" => $response['data']]);
+    if ($type === 'search') {
+        // Handle search request
+        $query = $_POST['query'] ?? '';
+
+        if (!$query) {
+            echo json_encode(["status" => "fail", "message" => "Search query not provided"]);
+            exit;
+        }
+
+        error_log("Received search query in search_sender: " . $query);
+
+        $rabbitRequest = [
+            'type' => 'search',
+	    'query' => $query,
+	    'username' => $username
+        ];
+        
+    } elseif ($type === 'like') {
+        // Handle like request
+	    
+	$event = json_decode($_POST['event'], true);
+        
+        if (!$event) {
+            echo json_encode(["status" => "fail", "message" => "Event data not provided"]);
+            exit;
+        }
+
+        error_log("Received like request for event in search_sender: " . print_r($event, true));
+        $rabbitRequest = [
+            'type' => 'like',
+            'username' => $username,  // Use decoded username
+            'event' => $event
+        ];
+
+    } else {
+        echo json_encode(["status" => "fail", "message" => "Invalid request type"]);
+        exit;
+    }
+    // Send request to RabbitMQ and process response
+    try {
+        $response = $client->send_request($rabbitRequest);
+        if (isset($response['status']) && $response['status'] === 'success') {
+            echo json_encode([
+                "status" => "success",
+                "message" => $response['message'] ?? "Request processed successfully",
+                "data" => $response['data'] ?? null
+            ]);
         } else {
-                    error_log("Unexpected response format from search_handler: " . print_r($response, true));
             echo json_encode(["status" => "fail", "message" => $response['message'] ?? "Unknown error occurred"]);
         }
     } catch (Exception $e) {
-        // Catch any exceptions and return as JSON
-        error_log("Error in search_sender: " . $e->getMessage());
         echo json_encode(["status" => "fail", "message" => "Server error occurred"]);
     }
 
