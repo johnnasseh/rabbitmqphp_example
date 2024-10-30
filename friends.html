@@ -6,8 +6,19 @@
     <title>Friends</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
     <script>
+        // checks for token
+        window.onload = function() {
+            const token = localStorage.getItem("token");
+            if (!token) {
+                alert("You must be logged in to view friend requests.");
+                window.location.href = "index.html"; // if not logged in redirects to login
+            } else {
+                fetchFriendData(); // if logged in then fetches friend data
+            }
+        };
+
         function fetchFriendData() {
-            console.log("Fetching updated data...");
+            console.log("Fetching friend data...");
             const token = localStorage.getItem("token");
             if (!token) {
                 alert("You must be logged in to view friend requests.");
@@ -21,8 +32,11 @@
             })
             .then(response => response.json())
             .then(data => {
-                console.log("Received data:", data);
+                console.log("Data received from backend:", data);
                 if (data.status === 'success') {
+                    console.log("Incoming Requests:", data.incomingRequests);
+                    console.log("Pending Requests:", data.pendingRequests);
+                    console.log("Friends List:", data.friends);
                     displayIncomingRequests(data.incomingRequests);
                     displayPendingRequests(data.pendingRequests);
                     displayFriends(data.friends);
@@ -37,7 +51,7 @@
             console.log("Displaying incoming requests:", incomingRequests);
             const incomingList = document.getElementById('incomingRequests');
             incomingList.innerHTML = '';
-            if (incomingRequests.length > 0) {
+            if (incomingRequests && incomingRequests.length > 0) {
                 incomingRequests.forEach(request => {
                     incomingList.innerHTML += `<li class="list-group-item d-flex justify-content-between align-items-center">
                         ${request}
@@ -56,7 +70,7 @@
             console.log("Displaying pending requests:", pendingRequests);
             const pendingList = document.getElementById('pendingRequests');
             pendingList.innerHTML = '';
-            if (pendingRequests.length > 0) {
+            if (pendingRequests && pendingRequests.length > 0) {
                 pendingRequests.forEach(request => {
                     pendingList.innerHTML += `<li class="list-group-item">${request}</li>`;
                 });
@@ -69,7 +83,7 @@
             console.log("Displaying friends list:", friends);
             const friendsList = document.getElementById('friendsList');
             friendsList.innerHTML = '';
-            if (friends.length > 0) {
+            if (friends && friends.length > 0) {
                 friends.forEach(friend => {
                     friendsList.innerHTML += `<li class="list-group-item">${friend}</li>`;
                 });
@@ -92,9 +106,10 @@
             })
             .then(response => response.json())
             .then(data => {
+                console.log("Friend request action response:", data);
                 if (data.status === "success") {
                     alert(data.message);
-                    fetchFriendData(); // Refresh friend requests and friends list after action
+                    fetchFriendData(); // Refresh lists after action
                 } else {
                     alert("Failed to handle request: " + data.message);
                 }
@@ -117,22 +132,19 @@
             })
             .then(response => response.json())
             .then(data => {
+                console.log("Send friend request response:", data);
                 if (data.status === 'success') {
                     alert(data.message);
-                    fetchFriendData(); // Refresh friend requests and friends list after sending request
+                    fetchFriendData(); // refreshs lists after sending request
                 } else {
                     alert(data.message);
                 }
             })
             .catch(error => console.error('Error:', error));
         }
-
-        // Call fetchFriendData on page load
-        window.onload = fetchFriendData;
     </script>
 </head>
 <body>
-    <?php include('nav.php'); ?>
     <div class="container mt-5">
         <h1>Friends</h1>
 

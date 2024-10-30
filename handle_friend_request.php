@@ -24,7 +24,7 @@ if ($token && $friendUsername && $action) {
         error_log("Action '$action' for user '$username' on friend '$friendUsername'");
 
         if ($action === 'send_request') {
-            // Insert the friend request into the database
+            // inserts the friend request into the database
             $query = $db->prepare("INSERT INTO FriendRequests (username, requested_username, status) VALUES (?, ?, 'pending')");
             $query->bind_param('ss', $username, $friendUsername);
 
@@ -35,7 +35,7 @@ if ($token && $friendUsername && $action) {
                 echo json_encode(['status' => 'fail', 'message' => 'Failed to send friend request']);
             }
         } elseif ($action === 'accept') {
-            // Update request to accepted and insert into friends list
+            // updates request to accepted and insert into friends list
             $updateRequest = $db->prepare("UPDATE FriendRequests SET status = 'accepted' WHERE username = ? AND requested_username = ?");
             $updateRequest->bind_param('ss', $friendUsername, $username);
 
@@ -51,7 +51,7 @@ if ($token && $friendUsername && $action) {
                 echo json_encode(['status' => 'fail', 'message' => 'Failed to accept friend request']);
             }
         } elseif ($action === 'decline') {
-            // Update request to declined
+            // updates request to declined
             $declineRequest = $db->prepare("UPDATE FriendRequests SET status = 'declined' WHERE username = ? AND requested_username = ?");
             $declineRequest->bind_param('ss', $friendUsername, $username);
 

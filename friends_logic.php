@@ -20,7 +20,7 @@ if ($token) {
 
         $db = getDB();
 
-        // Fetch incoming friend requests
+        // fetch incoming friend requests
         $incomingQuery = $db->prepare("SELECT username FROM FriendRequests WHERE requested_username = ? AND status = 'pending'");
         $incomingQuery->bind_param('s', $username);
         $incomingQuery->execute();
@@ -29,9 +29,9 @@ if ($token) {
         while ($row = $incomingResult->fetch_assoc()) {
             $incomingRequests[] = $row['username'];
         }
-        error_log("Incoming Requests: " . json_encode($incomingRequests));
+        error_log("Incoming Requests for $username: " . json_encode($incomingRequests));
 
-        // Fetch pending friend requests
+        // fetch pending friend requests
         $pendingQuery = $db->prepare("SELECT requested_username FROM FriendRequests WHERE username = ? AND status = 'pending'");
         $pendingQuery->bind_param('s', $username);
         $pendingQuery->execute();
@@ -40,9 +40,9 @@ if ($token) {
         while ($row = $pendingResult->fetch_assoc()) {
             $pendingRequests[] = $row['requested_username'];
         }
-        error_log("Pending Requests: " . json_encode($pendingRequests));
+        error_log("Pending Requests for $username: " . json_encode($pendingRequests));
 
-        // Fetch friends list
+        // fetch friends list
         $friendsQuery = $db->prepare("SELECT friend_username FROM Friends WHERE username = ?");
         $friendsQuery->bind_param('s', $username);
         $friendsQuery->execute();
@@ -51,9 +51,9 @@ if ($token) {
         while ($row = $friendsResult->fetch_assoc()) {
             $friends[] = $row['friend_username'];
         }
-        error_log("Friends: " . json_encode($friends));
+        error_log("Friends for $username: " . json_encode($friends));
 
-        // Return all data
+        // outputs only JSON data
         echo json_encode([
             'status' => 'success',
             'incomingRequests' => $incomingRequests,
