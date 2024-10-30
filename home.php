@@ -116,7 +116,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         })
           .catch(error => {
           console.error('Error:', error);
-          document.body.innerHTML = "<h1>Error: unable to verify token<h1>";
             });
         }
       }
