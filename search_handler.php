@@ -62,34 +62,44 @@ function saveLikedEvents($username, $eventData) {
         return ["status" => "fail", "message" => "User not found"];
     }
     $userId = $user['id'];
+    $title = $eventData['title'];
+    $date_start = !empty($eventData['date']['startDate']) ? date('Y-m-d', strtotime($eventData['date']['startDate'] . ' ' . date('Y'))) : null;
+    $time_start = !empty($eventData['date']['when']) ? date('H:i:s', strtotime($eventData['date']['when'])) : null;
+    $location = isset($eventData['address'][1]) ? $eventData['address'][1] : null; // City/State part
+    $address = !empty($eventData['address']) ? implode(', ', $eventData['address']) : null;
+    $description = $eventData['description'];
+    $thumbnail = $eventData['thumbnail'];
+    $link = $eventData['link'];
+    $venue_name = $eventData['venue']['name'] ?? null;
+    $venue_reviews = $eventData['venue']['reviews'] ?? null;
+    $venue_link = $eventData['venue']['link'] ?? null;
 
-	$eventInsert = $mydb->prepare("INSERT INTO Events (title, date_start, time_start, location, address, description, thumbnail, link, venue_name, venue_reviews, venue_link)
+    $eventInsert = $mydb->prepare("INSERT INTO Events (title, date_start, time_start, location, address, description, thumbnail, link, venue_name, venue_reviews, venue_link)
                                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                                    ON DUPLICATE KEY UPDATE event_id=LAST_INSERT_ID(event_id)");
     $eventInsert->bind_param("sssssssssis",
-        $eventData['title'],
-        $eventData['date_start'],
-        $eventData['time_start'],
-        $eventData['location'],
-        $eventData['address'],
-        $eventData['description'],
-        $eventData['thumbnail'],
-        $eventData['link'],
-        $eventData['venue_name'],
-        $eventData['venue_reviews'],
-        $eventData['venue_link']
+        $title,
+        $date_start,
+        $time_start,
+        $location,
+        $address,
+        $description,
+        $thumbnail,
+        $link,
+        $venue_name,
+        $venue_reviews,
+        $venue_link
     );
     $eventInsert->execute();
     $eventId = $eventInsert->insert_id;
 
-    //associate event with user in user_likes
-        $likeInsert = $mydb->prepare("INSERT IGNORE INTO User_Likes (id, event_id) VALUES (?, ?)");
+    $likeInsert = $mydb->prepare("INSERT IGNORE INTO User_Likes (id, event_id) VALUES (?, ?)");
     $likeInsert->bind_param("ii", $userId, $eventId);
     $likeInsert->execute();
 
     return $likeInsert->affected_rows > 0 ? ["status" => "success"] : ["status" => "fail", "message" => "Event already liked"];
 }
-function requestProcessor($request) {
+    function requestProcessor($request) {
     global $jwt_secret;
 
     error_log("Request received in search_handler:");
