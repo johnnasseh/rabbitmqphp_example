@@ -10,7 +10,7 @@ error_reporting(E_ALL);
 
 $env = parse_ini_file('.env');
 $jwt_secret = $env['JWT_SECRET'] ?? '';
-
+$username = "";
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 	echo "<pre>" . print_r($_POST, true) . "</pre>";
 
@@ -25,7 +25,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         // decode the token
         error_log("Token received: " . $token);
         $decoded = JWT::decode($token, new Key($jwt_secret, 'HS256'));
-        $username = $decoded->data->username;
+	$username = $decoded->data->username;
+	error_log($username);
         $email = $decoded->data->email;
         error_log("Token decoded successfully. User: " . $username);
 
@@ -53,7 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>EventPulse</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
-    <script>
+<script>
       function logout() {
         const token = localStorage.getItem("token");
       
@@ -83,10 +84,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
           window.location.href = "index.html";
         }
       }
-      // retreiving the token from localStorage
-      window.onload = function(){
+// retreiving the token from localStorage
+window.onload = function(){
         const token = localStorage.getItem("token");
-        console.log("token: ", token);
+ 	const username = localStorage.getItem("username");
+
+	console.log("token: ", token);
+	console.log("username: ", username);
         // if no token is found, redirect to the login page
         if (!token) {
 		console.error("Token not found in search.php. Redirecting to login.");
@@ -97,33 +101,60 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 	headers: {'Content-Type': 'application/x-www-form-urlencoded',	},
 		body: 'token=' + encodeURIComponent(token),
         })
-          .then(response => response.json()) // parse the response as json
+         .then(response => response.json()) // parse the response as json
           .then(data => {
           // if the server responds with a failure, show an error message
 	            if (data.status === "fail") {
             document.getElementById("content").innerHTML = "<h1>Error: " + data.message + "</h1>";
 
-          } else {
-            // if successful, display the users name on the page
-            document.getElementById("content").innerHTML = "<h1>Welcome " + data.username + "!</h1>";
-          }
+		    } else {
+			    // if successful, display the users name on the page
+		username = 
+		  console.log("username received:", username);
+            document.getElementById("content").innerHTML = "<h1>Welcome " + data.username + "!</h1>"
+	  }
         })
 		          .catch(error => {
           console.error('Error:', error);
           });
         }
-      }
+}
+
+    function fetchUserData() {
+        console.log("Fetching user data...");
+        const token = localStorage.getItem("token");
+
+        fetch('search_sender.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `token=${encodeURIComponent(token)}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                username = data.username; // Store username in a global variable
+                console.log("Username stored for like system:", username);
+            } else {
+                alert(data.message);
+            }
+        })
+        .catch(error => console.error('Error fetching user data:', error));
+    }
+let eventsResults = [];
 function performSearch(query) {
-    fetch("search_sender.php", {
+	const token = localStorage.getItem("token");
+	fetch("search_sender.php", {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: `query=${encodeURIComponent(query)}`
+        body: `type=search&query=${encodeURIComponent(query)}&token=${encodeURIComponent(token)}`
     })
     .then(response => response.json())
     .then(data => {
         console.log("Search results:", data);
         if (data.status === "success" && data.data && data.data.eventsResults) {
-            displayResults(data.data.eventsResults); 
+		eventsResults = data.data.eventsResults;
+		console.log("eventsresults populated:", eventsResults);
+		displayResults(eventsResults); 
 	} else {
 	    console.error("Error or unexpected data structure in response:", data);
             document.getElementById("results").innerHTML = "<p>Error: " + data.message + "</p>";
@@ -171,12 +202,46 @@ window.addEventListener("DOMContentLoaded", function() {
                                 <p class="card-text"><strong>Location:</strong> ${event.address.join(', ')}</p>
                                 <p class="card-text">${event.description}</p>
                                 <a href="${event.link}" target="_blank" class="btn btn-primary">Get Tickets</a>
-                            </div>
+		   <button class="btn btn-outline-secondary mt-2" onclick="likeEvent(${index})">Like</button>
+				</div>
                         </div>
                     </div>`;
                 resultsContainer.insertAdjacentHTML("beforeend", eventCard);      
             });
+	}
+
+function likeEvent(index) {
+	const token = localStorage.getItem("token");
+	const username = localStorage.getItem("username");
+	const event = eventsResults[index];
+	if (!event) {
+	console.error("event not found at index:", index);
+	return;
+	}
+
+	if (!username) {
+		console.error("username not set yet");
+		return;
+} 
+
+    console.log("Liking event:", event, "with username", username);
+ 
+    fetch("search_sender.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: `type=like&username=${encodeURIComponent(username)}&event=${encodeURIComponent(JSON.stringify(event))}&token=${encodeURIComponent(token)}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === "success") {
+            alert("Event liked successfully!");
+        } else {
+            alert("Error liking event: " + data.message);
         }
+    })
+    .catch(error => console.error("Error during like request:", error));
+}
+
 </script>
 </head>
 <body>
