@@ -1,195 +1,169 @@
-<?php:
-require_once('path.inc');
-require_once('get_host_info.inc');
-require_once('rabbitMQLib.inc');
+<?php
 require_once('vendor/autoload.php');
-
+require('nav.php');
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL & ~E_DEPRECATED);
-
 $env = parse_ini_file('.env');
 $jwt_secret = $env['JWT_SECRET'];
+$username = "";
 
-$client = new rabbitMQClient("testRabbitMQ.ini", "friendsMQ");
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    $token = $_POST['token'] ?? '';
+    if (!$token) {
+        http_response_code(401);
+        echo json_encode(["status" => "fail", "message" => "Token not provided"]);
+        exit;
+    }
 
-$token = $_POST['token'] ?? '';
-
-if ($token) {
     try {
-        // decode token to get username
         $decoded = JWT::decode($token, new Key($jwt_secret, 'HS256'));
         $username = $decoded->data->username;
-
-        // prepare the request for rabbit
-        $rabbitRequest = [
-            'type' => 'get_friends_data',
-            'username' => $username,
-        ];
-
-        // send request to rabbit and get the response
-        $response = $client->send_request($rabbitRequest, "friends_data_responses");
-
-        if ($response['status'] === 'success') {
-            $friends = $response['friends'];
-            $pendingRequests = $response['pendingRequests'];
-            $incomingRequests = $response['incomingRequests'];
-        } else {
-            echo json_encode(["status" => "fail", "message" => $response['message']]);
-            exit;
-        }
+        echo json_encode([
+            "status" => "success",
+            "username" => $username
+        ]);
+        exit;
     } catch (Exception $e) {
+        http_response_code(401);
         echo json_encode(["status" => "fail", "message" => "Invalid or expired token"]);
         exit;
     }
-} else {
-    echo json_encode(["status" => "fail", "message" => "Token not provided"]);
-    exit;
-}
-
-if (isset($_POST['search_username'])) {
-    $searchUsername = $_POST['search_username'];
-    
-    // search request for rabbit
-    $rabbitRequest = [
-        'type' => 'search_users',
-        'search_username' => $searchUsername,
-    ];
-
-    // send request to rabbit and get response
-    $searchResponse = $client->send_request($rabbitRequest, "search_users_responses");
-
-    if ($searchResponse['status'] === 'success') {
-        echo json_encode(['status' => 'success', 'users' => $searchResponse['users']]);
-    } else {
-        echo json_encode(['status' => 'fail', 'message' => 'User not found']);
-    }
-    exit;
 }
 ?>
 
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Friends</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1>Friends</h1>
+
+        <h2>Send Friend Request</h2>
+        <div class="form-group">
+            <input type="text" id="searchInput" class="form-control" placeholder="Enter username">
+            <button class="btn btn-primary mt-2" onclick="sendFriendRequest()">Send Request</button>
+        </div>
+
+        <h2>Incoming Friend Requests</h2>
+        <ul class="list-group" id="incomingRequests"></ul>
+
+        <h2>Pending Friend Requests</h2>
+        <ul class="list-group" id="pendingRequests"></ul>
+
+        <h2>Friends List</h2>
+        <ul class="list-group" id="friendsList"></ul>
+    </div>
+
     <script>
-        function handleFriendRequest(friendUsername, action) {
+        window.onload = function() {
             const token = localStorage.getItem("token");
             if (!token) {
-                alert("You must be logged in to perform this action.");
-                return;
+                alert("You must be logged in to view friend requests.");
+                window.location.href = "index.html";
+            } else {
+                fetchFriendData();
             }
+        };
 
-            fetch('handle_friend_request.php', {
+        function fetchFriendData() {
+            const token = localStorage.getItem("token");
+
+            fetch('friends_sender.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `token=${encodeURIComponent(token)}&friend_username=${encodeURIComponent(friendUsername)}&action=${action}`
+                body: `token=${encodeURIComponent(token)}&type=get_friends_data`
             })
             .then(response => response.json())
             .then(data => {
-                if (data.status === "success") {
-                    alert(data.message);
-                    location.reload();
+                if (data.status === 'success') {
+                    displayIncomingRequests(data.incomingRequests);
+                    displayPendingRequests(data.pendingRequests);
+                    displayFriends(data.friends);
                 } else {
-                    alert("Failed to handle request: " + data.message);
+                    alert(data.message);
                 }
             })
             .catch(error => console.error('Error:', error));
         }
 
-        function searchUsers() {
-            const searchUsername = document.getElementById("searchUsername").value;
+        function sendFriendRequest() {
             const token = localStorage.getItem("token");
+            const friendUsername = document.getElementById('searchInput').value;
 
-            fetch("friends.php", {
-                method: "POST",
-                headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                body: `token=${encodeURIComponent(token)}&search_username=${encodeURIComponent(searchUsername)}`
+            fetch('friends_sender.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `token=${encodeURIComponent(token)}&friend_username=${encodeURIComponent(friendUsername)}&type=send_request`
             })
             .then(response => response.json())
             .then(data => {
-                if (data.status === "success") {
-                    displaySearchResults(data.users);
-                } else {
-                    alert("User not found");
-                }
+                alert(data.message);
+                fetchFriendData();
             })
-            .catch(error => console.error("Error:", error));
+            .catch(error => console.error('Error:', error));
         }
 
-        function displaySearchResults(users) {
-            const resultsContainer = document.getElementById("searchResults");
-            resultsContainer.innerHTML = ""; 
-            
-            users.forEach(user => {
-                const result = document.createElement("li");
-                result.classList.add("list-group-item");
-                result.innerHTML = `
-                    ${user.username}
-                    <button class="btn btn-primary btn-sm float-right" onclick="handleFriendRequest('${user.username}', 'send_request')">Send Friend Request</button>
-                `;
-                resultsContainer.appendChild(result);
-            });
+        function displayIncomingRequests(incomingRequests) {
+            const incomingList = document.getElementById('incomingRequests');
+            incomingList.innerHTML = '';
+            if (incomingRequests && incomingRequests.length > 0) {
+                incomingRequests.forEach(request => {
+                    incomingList.innerHTML += `<li class="list-group-item d-flex justify-content-between align-items-center">
+                        ${request}
+                        <button class="btn btn-success btn-sm" onclick="handleFriendRequest('${request}', 'accept')">Accept</button>
+                        <button class="btn btn-danger btn-sm" onclick="handleFriendRequest('${request}', 'decline')">Decline</button>
+                    </li>`;
+                });
+            } else {
+                incomingList.innerHTML = '<li class="list-group-item">No incoming requests</li>';
+            }
+        }
+
+        function displayPendingRequests(pendingRequests) {
+            const pendingList = document.getElementById('pendingRequests');
+            pendingList.innerHTML = '';
+            if (pendingRequests && pendingRequests.length > 0) {
+                pendingRequests.forEach(request => {
+                    pendingList.innerHTML += `<li class="list-group-item">${request}</li>`;
+                });
+            } else {
+                pendingList.innerHTML = '<li class="list-group-item">No pending requests</li>';
+            }
+        }
+
+        function displayFriends(friends) {
+            const friendsList = document.getElementById('friendsList');
+            friendsList.innerHTML = '';
+            if (friends && friends.length > 0) {
+                friends.forEach(friend => {
+                    friendsList.innerHTML += `<li class="list-group-item">${friend}</li>`;
+                });
+            } else {
+                friendsList.innerHTML = '<li class="list-group-item">You have no friends added yet</li>';
+            }
+        }
+
+        function handleFriendRequest(friendUsername, action) {
+            const token = localStorage.getItem("token");
+
+            fetch('friends_sender.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `token=${encodeURIComponent(token)}&friend_username=${encodeURIComponent(friendUsername)}&type=${action}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message);
+                fetchFriendData();
+            })
+            .catch(error => console.error('Error:', error));
         }
     </script>
-</head>
-<body>
-    <?php include('nav.php'); ?>
-    <div class="container mt-5">
-        <h1>Friends</h1>
-
-        <h2>Search for Users</h2>
-        <div class="form-group">
-            <input type="text" id="searchUsername" class="form-control" placeholder="Enter username to search">
-            <button class="btn btn-primary mt-2" onclick="searchUsers()">Search</button>
-        </div>
-
-        <ul class="list-group" id="searchResults"></ul>
-
-        <h2>Incoming Friend Requests</h2>
-        <ul class="list-group">
-            <?php if (!empty($incomingRequests)) : ?>
-                <?php foreach ($incomingRequests as $request) : ?>
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <?php echo htmlspecialchars($request); ?>
-                        <div>
-                            <button class="btn btn-success btn-sm" onclick="handleFriendRequest('<?php echo $request; ?>', 'accept')">Accept</button>
-                            <button class="btn btn-danger btn-sm" onclick="handleFriendRequest('<?php echo $request; ?>', 'decline')">Decline</button>
-                        </div>
-                    </li>
-                <?php endforeach; ?>
-            <?php else : ?>
-                <li class="list-group-item">No incoming requests</li>
-            <?php endif; ?>
-        </ul>
-
-        <h2>Pending Friend Requests</h2>
-        <ul class="list-group">
-            <?php if (!empty($pendingRequests)) : ?>
-                <?php foreach ($pendingRequests as $request) : ?>
-                    <li class="list-group-item"><?php echo htmlspecialchars($request); ?></li>
-                <?php endforeach; ?>
-            <?php else : ?>
-                <li class="list-group-item">No pending requests</li>
-            <?php endif; ?>
-        </ul>
-
-        <h2>Friends List</h2>
-        <ul class="list-group">
-            <?php if (!empty($friends)) : ?>
-                <?php foreach ($friends as $friend) : ?>
-                    <li class="list-group-item"><?php echo htmlspecialchars($friend); ?></li>
-                <?php endforeach; ?>
-            <?php else : ?>
-                <li class="list-group-item">You have no friends added yet</li>
-            <?php endif; ?>
-        </ul>
-    </div>
 </body>
 </html>
