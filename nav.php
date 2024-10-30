@@ -17,7 +17,7 @@
                     <a class="nav-link" href="#">Saved Events</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="friends.php">Friends</a>
+                    <a class="nav-link" href="friends.html">Friends</a>
                 </li>
             </ul>
             <!-- Only Logout Button -->
