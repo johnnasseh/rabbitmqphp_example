@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Follow Artists</title>
+</head>
+<body>
+    <h1>Follow Artists</h1>
+    <form action="follow_artists.php" method="GET">
+        <input type="text" name="query" placeholder="Search for an artist" required>
+        <button type="submit">Search</button>
+    </form>
+
+    <div id="results">
+        <?php include 'follow_artists.php'; ?>
+    </div>
+
+    <div id="followed-artists">
+        <h2>Your Followed Artists</h2>
+        <?php include 'display_followed_artists.php'; ?>
+    </div>
+</body>
+</html>
+
+
+
