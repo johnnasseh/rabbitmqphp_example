@@ -43,6 +43,8 @@
         console.log("Sending data: ", "uname=" + encodeURIComponent(username) + "&pword=" + encodeURIComponent(password));
 	    // send the username and password as URL encoded form data
         request.send("uname=" + encodeURIComponent(username) + "&pword=" + encodeURIComponent(password));
+localStorage.setItem("username", username);
+
     }
 	// function to handle form submission
     function onSubmitLoginForm(event) {
