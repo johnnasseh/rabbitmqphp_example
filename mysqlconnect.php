@@ -1,4 +1,3 @@
-#!/usr/bin/php
 <?php
 
 function getDB(){
@@ -22,7 +21,6 @@ return $mydb;
 
 $mydb = getDB();
 
-echo "successfully connected to database".PHP_EOL;
 
 $query = "select * from Users;";
 
