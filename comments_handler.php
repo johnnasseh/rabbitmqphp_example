@@ -65,9 +65,9 @@ function addComment($userId, $eventId, $comment) {
 }
 function requestProcessor($request) {
     global $jwt_secret;
-
-    error_log("Request received in comments_handler:");
-    error_log(print_r($request, true));
+    global $mydb;
+    echo "Received request".PHP_EOL;
+    var_dump($request);
 
     if (!isset($request['type'])) {
         return ["status" => "fail", "message" => "Invalid request type"];

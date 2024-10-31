@@ -48,7 +48,8 @@ $rabbitRequest = [
     'type' => 'add_comment',
     'username' => $username,
     'event_id' => $eventId,
-    'comment' => $comment
+    'comment' => $comment,
+    'token' => $token
 ];
 error_log("Sending request to RabbitMQ: " . print_r($rabbitRequest, true));
     try {
