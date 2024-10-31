@@ -53,7 +53,8 @@
             .then(response => response.json())
             .then(data => {
                 if (data.status === "success" && data.event) {
-		    displayEventDetails(data.event);
+			displayEventDetails(data.event);
+			console.log("Comments received:", data.comments); 
 		    displayComments(data.comments);
                 } else {
                     alert("Failed to load event details: " + data.message);
@@ -71,7 +72,13 @@
             const commentsDiv = document.getElementById("comments");
             commentsDiv.innerHTML = '';
             comments.forEach(comment => {
-                commentsDiv.innerHTML += `<p><strong>${comment.username}</strong>: ${comment.comment}</p>`;
+        const commentElement = document.createElement('p');
+        const usernameElement = document.createElement('strong');
+        usernameElement.textContent = comment.username;
+
+        commentElement.appendChild(usernameElement);
+        commentElement.innerHTML += `: ${comment.comment}`;
+        commentsDiv.appendChild(commentElement);
             });
         }
 

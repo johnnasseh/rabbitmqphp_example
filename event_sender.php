@@ -36,7 +36,8 @@ $request = [
 ];
 
 if ($type === 'add_comment') {
-    $request['comment'] = $comment;
+//    $request['type'] = 'add_comment';
+    $request['comment'] = $comment; 
 }
 
 $response = $client->send_request($request);

@@ -26,7 +26,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 
     try {
-        // Decode JWT token to get username
 	    $decoded = JWT::decode($token, new Key($jwt_secret, 'HS256'));
 	    $username = $decoded->data->username;
     } catch (Exception $e) {
@@ -36,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $response = ["status" => "fail", "message" => "Invalid request"];
 
     if ($type === 'search') {
-        // Handle search request
+        // handle search request
         $query = $_POST['query'] ?? '';
 
         if (!$query) {
@@ -53,19 +52,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         ];
         
     } elseif ($type === 'like') {
-        // Handle like request
+        // handle like request
 	    
 	$event = json_decode($_POST['event'], true);
         
         if (!$event) {
-            echo json_encode(["status" => "fail", "message" => "Event data not provided"]);
+		echo json_encode(["status" => "fail", "message" => "Event data not provided"]);
             exit;
         }
 
         error_log("Received like request for event in search_sender: " . print_r($event, true));
         $rabbitRequest = [
             'type' => 'like',
-            'username' => $username,  // Use decoded username
+            'username' => $username,
             'event' => $event
         ];
 
@@ -73,7 +72,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         echo json_encode(["status" => "fail", "message" => "Invalid request type"]);
         exit;
     }
-    // Send request to RabbitMQ and process response
     try {
         $response = $client->send_request($rabbitRequest);
         if (isset($response['status']) && $response['status'] === 'success') {
