@@ -20,7 +20,7 @@ function getLikedEvents($username) {
     global $mydb;
 
     $stmt = $mydb->prepare("
-        SELECT Events.title, Events.date_start, Events.time_start, Events.location, Events.address, 
+        SELECT Events.event_id, Events.title, Events.date_start, Events.time_start, Events.location, Events.address, 
                Events.description, Events.thumbnail, Events.link, Events.venue_name, Events.venue_reviews, Events.venue_link
         FROM Events
         JOIN User_Likes ON Events.event_id = User_Likes.event_id
