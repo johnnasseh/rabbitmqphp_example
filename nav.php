@@ -11,7 +11,7 @@ require_once("get_url.php");
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
             <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                 <li class="nav-item">
-                    <a class="nav-link active" aria-current="page" href="#">Home</a>
+                <a class="nav-link" href="<?php echo get_url('/home.php'); ?>">Home</a>
 		</li>
                 <li class="nav-item">
 		<a class="nav-link" href="<?php echo get_url('/search.php'); ?>">Search</a>
@@ -21,7 +21,7 @@ require_once("get_url.php");
                     <a class="nav-link" href="#">Profile</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="#">Saved Events</a>
+                <a class="nav-link" href="<?php echo get_url('/likes.html'); ?>">Liked Events</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="friends.php">Friends</a>
