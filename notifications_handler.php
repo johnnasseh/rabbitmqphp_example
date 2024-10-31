@@ -3,7 +3,14 @@
 require_once('path.inc');
 require_once('get_host_info.inc');
 require_once('rabbitMQLib.inc');
+require_once('vendor/autoload.php');
 require_once('mysqlconnect.php');
+use Firebase\JWT\JWT;
+use Firebase\JWT\Key;
+
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL & ~E_DEPRECATED);
 
 function requestProcessor($request) {
     switch ($request['type']) {
