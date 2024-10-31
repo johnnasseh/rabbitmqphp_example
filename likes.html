@@ -43,6 +43,7 @@ require('nav.php');
             eventsContainer.innerHTML = '';
             if (events.length > 0) {
                 events.forEach(event => {
+			console.log("Event ID:", event.event_id);
                     eventsContainer.innerHTML += `
                         <div class="card mb-3" style="width: 100%;">
                             <div class="row no-gutters">
@@ -57,6 +58,7 @@ require('nav.php');
                                         <p class="card-text"><strong>Location:</strong> ${event.location}</p>
                                         <p class="card-text">${event.description}</p>
                                         <a href="${event.link}" target="_blank" class="btn btn-primary">Get Tickets</a>
+					                                    <a href="event.php?event_id=${encodeURIComponent(event.event_id)}" class="btn btn-secondary mt-2">Comments</a>
                                     </div>
                                 </div>
                             </div>

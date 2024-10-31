@@ -11,7 +11,7 @@ use Firebase\JWT\Key;
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL & ~E_DEPRECATED);
-
+error_log("likes handler started");
 $env = parse_ini_file('.env');
 $jwt_secret = $env['JWT_SECRET'];
 $mydb = getDB();
@@ -36,6 +36,7 @@ function getLikedEvents($username) {
         $likedEvents[] = $row;
     }
 
+        error_log("Liked events fetched for user '$username': " . json_encode($likedEvents));
     return ["status" => "success", "likedEvents" => $likedEvents];
 }
 
@@ -48,15 +49,17 @@ function requestProcessor($request) {
     if (!isset($request['type'])) {
         return ["status" => "fail", "message" => "Invalid request type"];
     }
-
     switch ($request['type']) {
         case 'get_liked_events':
             if (!isset($request['username'])) {
                 return ["status" => "fail", "message" => "Username not provided"];
             }
-            return getLikedEvents($request['username']);
+            $username = $request['username'];
+            error_log("Fetching liked events for username: " . $username);
+            return getLikedEvents($username);
 
         default:
+            error_log("Unsupported request type: " . $request['type']);
             return ["status" => "fail", "message" => "Unsupported request type"];
     }
 }

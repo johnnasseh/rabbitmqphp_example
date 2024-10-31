@@ -1,51 +1,4 @@
-<?php
-require_once('vendor/autoload.php');
-require_once('path.inc');
-require_once('get_host_info.inc');
-require_once('rabbitMQLib.inc');
-
-use Firebase\JWT\JWT;
-use Firebase\JWT\Key;
-
-$env = parse_ini_file('.env');
-$jwt_secret = $env['JWT_SECRET'] ?? '';
-$client = new rabbitMQClient("testRabbitMQ.ini", "commentsMQ");
-
-$token = $_POST['token'] ?? '';
-$eventId = $_GET['event_id'] ?? null;
-
-if (!$token || !$eventId) {
-    echo json_encode(["status" => "fail", "message" => "Token or event ID not provided"]);
-    exit;
-}
-
-// Decode JWT to get the username
-try {
-    $decoded = JWT::decode($token, new Key($jwt_secret, 'HS256'));
-    $username = $decoded->data->username;
-    $userId = $decoded->data->user_id;
-} catch (Exception $e) {
-    echo json_encode(["status" => "fail", "message" => "Invalid or expired token"]);
-    exit;
-}
-
-// Fetch event details and comments
-$request = [
-    'type' => 'get_event_details',
-    'event_id' => $eventId,
-    'username' => $username
-];
-
-$response = $client->send_request($request);
-
-if ($response['status'] === 'success') {
-    $eventDetails = $response['event'];
-    $comments = $response['comments'];
-} else {
-    echo "<p>Error: {$response['message']}</p>";
-    exit;
-}
-?>
+<?php require('nav.php'); ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -67,27 +20,76 @@ if ($response['status'] === 'success') {
         <button type="button" onclick="addComment()">Add Comment</button>
     </form>
 
-    <script>
-        function addComment() {
-            const token = '<?php echo $token; ?>';
-            const comment = document.getElementById("commentText").value;
+<script>
+        window.onload = function() {
+            const token = localStorage.getItem("token");
+            const eventId = new URLSearchParams(window.location.search).get("event_id");
+	    if (!token) {
+                alert("You must be logged in to view this page.");
+                window.location.href = "index.html";
+                return;
+	    }
 
-            fetch('add_comment.php', {
+	    if (!eventId) {
+		    alert("Event ID is missing.");
+		    window.location.href = "likes.html";
+		    return;
+	    }
+
+            fetchEventDetails(token, eventId);
+        };
+
+        function fetchEventDetails(token, eventId) {
+            fetch('event_sender.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `token=${encodeURIComponent(token)}&event_id=${<?php echo $eventId; ?>}&comment=${encodeURIComponent(comment)}`
+                body: `token=${encodeURIComponent(token)}&event_id=${encodeURIComponent(eventId)}`
             })
             .then(response => response.json())
             .then(data => {
-                if (data.status === "success") {
-                    location.reload(); // Reload page to show the new comment
+                if (data.status === "success" && data.event) {
+		    displayEventDetails(data.event);
+		    displayComments(data.comments);
                 } else {
-                    alert("Failed to add comment: " + data.message);
+                    alert("Failed to load event details: " + data.message);
                 }
             })
             .catch(error => console.error('Error:', error));
+	}
+
+	function displayEventDetails(event) {
+    document.getElementById("eventTitle").innerText = event.title;
+    document.getElementById("eventDescription").innerText = event.description;
+}
+
+        function displayComments(comments) {
+            const commentsDiv = document.getElementById("comments");
+            commentsDiv.innerHTML = '';
+            comments.forEach(comment => {
+                commentsDiv.innerHTML += `<p><strong>${comment.username}</strong>: ${comment.comment}</p>`;
+            });
         }
-    </script>
+
+    function addComment() {
+        const token = localStorage.getItem("token");
+        const eventId = new URLSearchParams(window.location.search).get("event_id");
+        const comment = document.getElementById("commentText").value;
+        fetch('add_comment.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `token=${encodeURIComponent(token)}&event_id=${encodeURIComponent(eventId)}&comment=${encodeURIComponent(comment)}`
+	})
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === "success") {
+                location.reload();
+            } else {
+                alert("Failed to add comment: " + data.message);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    } 
+  </script>
 </body>
 </html>
 
