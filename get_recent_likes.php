@@ -19,7 +19,7 @@ function getRecentLikedEvents($username) {
         FROM Events
         JOIN User_Likes ON Events.event_id = User_Likes.event_id
         JOIN Users ON User_Likes.id = Users.id
-        WHERE Users.username = ?
+        WHERE Users.user_id = userid
         ORDER BY User_Likes.date_liked DESC
         LIMIT 4
     ");
