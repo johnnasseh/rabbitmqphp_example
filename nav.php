@@ -24,7 +24,7 @@ require_once("get_url.php");
                 <a class="nav-link" href="<?php echo get_url('/likes.html'); ?>">Liked Events</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="friends.php">Friends</a>
+                    <a class="nav-link" href="friends.html">Friends</a>
                 </li>
             </ul>
             <!-- Only Logout Button -->
