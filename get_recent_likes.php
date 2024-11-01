@@ -11,7 +11,7 @@ $env = parse_ini_file('.env');
 $jwt_secret = $env['JWT_SECRET'];
 $mydb = getDB();
 
-function getRecentLikedEvents($username) {
+function getRecentLikedEvents($user_id) {
     global $mydb;
 
     $stmt = $mydb->prepare("
@@ -24,7 +24,7 @@ function getRecentLikedEvents($username) {
         LIMIT 4
     ");
     
-    $stmt->bind_param("s", $username);
+    $stmt->bind_param("s", $user_id);
     $stmt->execute();
     $result = $stmt->get_result();
 
@@ -46,9 +46,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     try {
         $decoded = JWT::decode($token, new Key($jwt_secret, 'HS256'));
-        $username = $decoded->data->username;
+        $user_id = $decoded->data->user_id;
 
-        $response = getRecentLikedEvents($username);
+        $response = getRecentLikedEvents($user_id);
         echo json_encode($response);
 
     } catch (Exception $e) {
