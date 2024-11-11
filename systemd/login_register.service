@@ -1,0 +1,13 @@
+[Unit]
+Description=Login and Register Service
+After=network.target
+StartLimitIntervalSec=0
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=john
+ExecStart=/home/john/git/rabbitmqphp_example/login_register.php
+
+[Install]
+WantedBy=multi-user.target
