@@ -26,7 +26,7 @@ function sendBundleToQueue($zipFilePath) {
     $zipData = base64_encode(file_get_contents($zipFilePath));
 
     // make rabbit client
-    $client = new rabbitMQClient("testRabbitMQ.ini", "deploymentQueue");
+    $client = new rabbitMQClient("testRabbitMQ.ini", "deploymentMQ");
 
     $request = [
         'type' => 'deploy_bundle',
