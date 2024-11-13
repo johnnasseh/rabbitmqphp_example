@@ -43,7 +43,7 @@ function sendBundleToQueue($zipFilePath) {
     }
 }
 
-$directoryToInclude = '/project/rabbitmqphp_example';
+$directoryToInclude = '../../project/rabbitmqphp_example/';
 // placeholder name we can change it once table has been made for deploy db
 $bundleName = 'project_bundle_' . date('Ymd_His') . '.zip';
 
