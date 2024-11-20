@@ -61,7 +61,7 @@ $bundleName = 'project_bundle_' . date('Ymd_His') . '.zip';
 
 // scp values
 // omars ip
-$remoteServer = '192.168.194.192'; 
+$remoteServer = '192.168.194.182'; 
 // path where bundle gets stored on omars vm
 $remotePath = '/var/deploy/bundles/';
 // omars user for ssh
