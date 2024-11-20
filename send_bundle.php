@@ -21,35 +21,60 @@ function createZip($directory, $bundleName) {
     }
 }
 
-function sendBundleToQueue($zipFilePath) {
-    // encodes the binary into base64
-    $zipData = base64_encode(file_get_contents($zipFilePath));
+function transferFileWithSCP($zipFilePath, $remoteServer, $remotePath, $username, $sshKey) {
+    $command = "scp -i $sshKey $zipFilePath $username@$remoteServer:$remotePath";
 
-    // make rabbit client
+    echo "Executing SCP command: $command\n";
+
+    exec($command, $output, $returnVar);
+    if ($returnVar === 0) {
+        echo "File successfully transferred\n";
+        return true;
+    } else {
+        echo "File failed to send, Error: " . implode("\n", $output) . "\n";
+        return false;
+    }
+}
+
+function sendMetadataToQueue($filename, $targetLocation) {
     $client = new rabbitMQClient("testRabbitMQ.ini", "deploymentMQ");
 
     $request = [
-        'type' => 'deploy_bundle',
-        'filename' => basename($zipFilePath),
-        'data' => $zipData,
+        'type' => 'deploy_metadata',
+        'filename' => $filename,
+        'location' => $targetLocation,
+        'status' => 'new',
     ];
 
     $response = $client->send_request($request);
 
     if ($response['status'] === 'success') {
-        echo "Bundle successfully sent to deployment queue.\n";
+        echo "Metadata successfully sent to RabbitMQ.\n";
     } else {
-        echo "Failed to send bundle to deployment queue: " . $response['message'] . "\n";
+        echo "Failed to send metadata to RabbitMQ: " . $response['message'] . "\n";
     }
 }
 
+// bundle values
 $directoryToInclude = '../../project/rabbitmqphp_example/';
-// placeholder name we can change it once table has been made for deploy db
 $bundleName = 'project_bundle_' . date('Ymd_His') . '.zip';
+
+// scp values
+// omars ip
+$remoteServer = '192.168.194.192'; 
+// path where bundle gets stored on omars vm
+$remotePath = '/var/deploy/bundles/';
+// omars user for ssh
+$username = 'Omarh';
+// path to private ssh key
+$sshKey = '../../.ssh/id_rsa';
+
 
 if (createZip($directoryToInclude, $bundleName)) {
     echo "Bundle created: $bundleName\n";
-    sendBundleToQueue($bundleName);
+    if (transferFileWithSCP($bundleName, $remoteServer, $remotePath, $username, $sshKey)) {
+        sendMetadataToQueue($bundleName, $remotePath);
+    }
     unlink($bundleName);
     echo "Local zip file removed.\n";
 } else {
