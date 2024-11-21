@@ -3,7 +3,6 @@
 require_once('path.inc');
 require_once('get_host_info.inc');
 require_once('rabbitMQLib.inc');
-require_once('mysqlconnect.php');
 
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
