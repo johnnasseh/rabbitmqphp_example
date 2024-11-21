@@ -6,7 +6,7 @@ require_once('rabbitMQLib.inc');
 require_once('deploy_mysqlconnect.php');
 
 function processBundle($filename, $location) {
-    $db = getDB();
+    $db = getDeployDB();
 
     $query = $db->prepare("SELECT * FROM Bundles WHERE bundle_name = ?");
     $query->bind_param('s', $filename);
