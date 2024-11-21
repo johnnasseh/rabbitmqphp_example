@@ -13,6 +13,24 @@ $env = parse_ini_file('.env');
 $mydb = getDB();
 $jwt_key = $env['JWT_SECRET']; 
 
+$logServer = new rabbitMQClient("testRabbitMQ.ini", "logsMQ");
+
+function log_message($message)
+{
+	global $logServer;
+	$logRequest = array(
+		'type' => 'log',
+		'message' => $message,
+		'timestamp' => date('m-d-Y H:i:s'),
+	);
+	try {
+		$logServer->publish($logRequest);
+		error_log("Log message published: " . json_encode($logRequest));
+	} catch (Exception $e) {
+		error_log("Failed to publish log message: " . $e->getMessage());
+	}
+}
+
 // register function: handles user registration
 function doRegister($username, $password, $email)
 {
@@ -26,7 +44,9 @@ function doRegister($username, $password, $email)
     $result = $stmt->get_result(); //getting results
 
     if ($result->num_rows > 0) {
-        // return failure if username or email exists
+	// logging error message
+	log_message("Registration failed: Username or email already exists. Username: $username, Email: $email");    
+    // return failure if username or email exists
         return ["status" => "fail", "message" => "Username or email already exists."];
     }
 
@@ -55,6 +75,7 @@ function doRegister($username, $password, $email)
             "token" => $jwt
         );
     } else {
+	log_message("Registration failed: Failed to register user. Username: $username, Email: $email");
         // Return failure if registration fails
         return ["status" => "fail", "message" => "Failed to register user."];
     }
@@ -96,11 +117,12 @@ function doLogin($username, $password)
                 "username" => $user['username'],
                 "email" => $user['email']
             );
-        } else {
+	} else {
             // Return failure if password is incorrect
             return array("status" => "fail", "message" => "Incorrect password.");
         }
     } else {
+	
         // Return failure if user does not exist
         return array("status" => "fail", "message" => "User does not exist.");
     }
@@ -114,6 +136,7 @@ function requestProcessor($request)
 
     // make sure  the request has a valid 'type' field
     if (!isset($request['type'])) {
+	log_message("Invalid request type received.");
         return array("status" => "fail", "message" => "Invalid request type");
     }
 
