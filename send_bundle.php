@@ -65,7 +65,7 @@ $remoteServer = '192.168.194.182';
 // path where bundle gets stored on omars vm
 $remotePath = '/var/deploy/bundles/';
 // omars user for ssh
-$username = 'Omarh';
+$username = 'omarh';
 // path to private ssh key
 $sshKey = '../../.ssh/id_rsa';
 
@@ -80,4 +80,6 @@ if (createZip($directoryToInclude, $bundleName)) {
 } else {
     echo "Error creating zip file.\n";
 }
+$response = $client->send_request($request);
+echo "RabbitMQ Response: " . print_r($response, true) . "\n";
 ?>
