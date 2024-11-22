@@ -5,6 +5,7 @@ require_once('get_host_info.inc');
 require_once('rabbitMQLib.inc');
 require_once('mysqlconnect.php');
 require_once('vendor/autoload.php');
+require_once('log_utils.php');
 
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
@@ -12,24 +13,6 @@ use Firebase\JWT\Key;
 $env = parse_ini_file('.env');
 $mydb = getDB();
 $jwt_key = $env['JWT_SECRET']; 
-
-$logServer = new rabbitMQClient("testRabbitMQ.ini", "logsMQ");
-
-function log_message($message)
-{
-	global $logServer;
-	$logRequest = array(
-		'type' => 'log',
-		'message' => $message,
-		'timestamp' => date('m-d-Y H:i:s'),
-	);
-	try {
-		$logServer->publish($logRequest);
-		error_log("Log message published: " . json_encode($logRequest));
-	} catch (Exception $e) {
-		error_log("Failed to publish log message: " . $e->getMessage());
-	}
-}
 
 // register function: handles user registration
 function doRegister($username, $password, $email)
