@@ -19,7 +19,9 @@ function requestProcessor($request) {
         	]));
         	$data = json_decode($response, true);
         	$artists = array_map(fn($artist) => [
-            	"id" => $artist['id'], "name" => $artist['name'], "disambiguation" => $artist['disambiguation'] ?? ''
+            	"id" => $artist['id'],
+            	"name" => $artist['name'],
+            	"disambiguation" => $artist['disambiguation'] ?? ''
         	], $data['artists'] ?? []);
         	return ["status" => "success", "artists" => $artists];
 
@@ -27,11 +29,17 @@ function requestProcessor($request) {
         	$username = $request['username'];
         	$artist_id = $request['artist_id'];
         	$artist_name = $request['artist_name'];
+
         	$db = getDB();
 
         	try {
-            	$stmt = $db->prepare("INSERT INTO user_follows (user_id, entity_id, entity_type, follow_date) VALUES ((SELECT id FROM Users WHERE username = ?), ?, 'artist', NOW())");
-            	$stmt->bind_param("ss", $username, $artist_id);
+            	$stmt = $db->prepare("
+                	INSERT INTO user_follows (user_id, entity_id, entity_type, name, follow_date)
+                	VALUES (
+                    	(SELECT id FROM Users WHERE username = ?), ?, 'artist', ?, NOW()
+                	)
+            	");
+            	$stmt->bind_param("sss", $username, $artist_id, $artist_name);
             	$stmt->execute();
 
             	if ($stmt->affected_rows > 0) {
@@ -51,3 +59,4 @@ function requestProcessor($request) {
 
 $server = new rabbitMQServer("testRabbitMQ.ini", "followMQ");
 $server->process_requests('requestProcessor');
+?>
