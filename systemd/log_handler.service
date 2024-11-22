@@ -1,0 +1,13 @@
+[Unit]
+Description=Logging Service
+After=network.target
+StartLimitIntervalSec=0
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=john
+ExecStart=/home/john/git/rabbitmqphp_example/log_handler.php
+
+[Install]
+WantedBy=multi-user.target
