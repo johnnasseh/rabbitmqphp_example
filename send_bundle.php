@@ -53,6 +53,7 @@ function sendMetadataToQueue($filename, $targetLocation) {
     } else {
         echo "Failed to send metadata to RabbitMQ: " . $response['message'] . "\n";
     }
+    echo "RabbitMQ Response: " . print_r($response, true) . "\n";
 }
 
 // bundle values
@@ -80,6 +81,4 @@ if (createZip($directoryToInclude, $bundleName)) {
 } else {
     echo "Error creating zip file.\n";
 }
-$response = $client->send_request($request);
-echo "RabbitMQ Response: " . print_r($response, true) . "\n";
 ?>
