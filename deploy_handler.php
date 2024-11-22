@@ -16,7 +16,7 @@ function processBundle($filename, $location) {
     if ($result->num_rows === 0) {
         $status = 'new';
         $insert = $db->prepare("INSERT INTO Bundles (bundle_name, bundle_path, status) VALUES (?, ?, ?)");
-        $bundlePath = $location . '/' . $filename;
+        $bundlePath = $location . $filename;
         $insert->bind_param('sss', $filename, $bundlePath, $status);
         if ($insert->execute()) {
             echo "Bundle '$filename' added to Bundles table.\n";
