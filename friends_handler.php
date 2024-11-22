@@ -4,15 +4,16 @@ require_once('path.inc');
 require_once('get_host_info.inc');
 require_once('rabbitMQLib.inc');
 require_once('mysqlconnect.php');
+require_once('log_utils.php');
 
 function requestProcessor($request) {
     if (!isset($request['type'])) {
-        error_log("Error: Invalid request format - missing 'type'.");
+        log_message("Error: Invalid request format - missing 'type'.");
         return ["status" => "error", "message" => "Invalid request"];
     }
 
     // debugging to find request type
-    error_log("Processing request type: " . $request['type']);
+    log_message("Processing request type: " . $request['type']);
 
     switch ($request['type']) {
         case 'get_friends_data':
@@ -77,15 +78,24 @@ function getFriendsData($username) {
 }
 
 function sendFriendRequest($username, $friendUsername) {
-    $db = getDB();
+	$db = getDB();
+	try {
     $query = $db->prepare("INSERT INTO FriendRequests (username, requested_username, status) VALUES (?, ?, 'pending')");
+           if ($query === false) {
+            log_message("Error preparing friend request query: " . $db->error);
+            throw new Exception("Error preparing friend request query");
+        }
     $query->bind_param('ss', $username, $friendUsername);
 
     if ($query->execute()) {
         return ["status" => "success", "message" => "Friend request sent"];
     } else {
-        error_log("Error sending friend request: " . $query->error);
-        return ["status" => "fail", "message" => "Failed to send friend request"];
+        log_message("Error executing friend request for username $username to $friendUsername: " . $query->error);
+        throw new Exception("Failed to send friend request");
+    }
+} catch (Exception $e) {
+        log_message("Error in sendFriendRequest: " . $e->getMessage());
+        return ["status" => "fail", "message" => "Error sending friend request"];
     }
 }
 
