@@ -1,39 +1,78 @@
 <?php
-require_once('deploy_mysqlconnect.php');
+require_once('path.inc');
+require_once('get_host_info.inc');
+require_once('rabbitMQLib.inc');
 
-function installLatestBundle() {
-    $db = getDeployDB();
+function transferBundleFromDeploy($bundleName, $deployServer, $deployPath, $qaPath, $username, $sshKey) {
+    $command = "scp -i $sshKey $username@$deployServer:$deployPath/$bundleName $qaPath";
+    echo "Executing SCP command: $command\n";
 
-    $query = $db->prepare("SELECT bundle_name FROM Bundles WHERE status = 'new' ORDER BY id DESC LIMIT 1");
-    $query->execute();
-    $result = $query->get_result();
-
-    if ($row = $result->fetch_assoc()) {
-        $bundlePath = '/var/deploy/bundles/' . $row['bundle_name'];
-
-        if (!file_exists($bundlePath)) {
-            echo "Bundle file not found: $bundlePath\n";
-            return;
-        }
-
-        $installPath = '../../project/rabbitmqphp_example';
-        $zip = new ZipArchive();
-        if ($zip->open($bundlePath) === TRUE) {
-            $zip->extractTo($installPath);
-            $zip->close();
-
-            $update = $db->prepare("UPDATE Bundles SET status = 'installed' WHERE bundle_name = ?");
-            $update->bind_param("s", $row['bundle_name']);
-            $update->execute();
-
-            echo "Bundle installed successfully.\n";
-        } else {
-            echo "Failed to extract bundle.\n";
-        }
+    exec($command, $output, $returnVar);
+    if ($returnVar === 0) {
+        echo "Bundle successfully transferred to QA: $bundleName\n";
+        return true;
     } else {
-        echo "No new bundles available.\n";
+        echo "Failed to transfer bundle: " . implode("\n", $output) . "\n";
+        return false;
     }
 }
 
-installLatestBundle();
+function installBundleOnQA($bundleName, $qaPath) {
+    // install directory on qa
+    $installPath = '/var/bundletest';
+    $bundlePath = $qaPath . '/' . $bundleName;
+
+    $zip = new ZipArchive();
+    if ($zip->open($bundlePath) === TRUE) {
+        $zip->extractTo($installPath);
+        $zip->close();
+        unlink($bundlePath);
+        echo "Bundle installed successfully on QA.\n";
+        return true;
+    } else {
+        echo "Failed to extract bundle on QA.\n";
+        return false;
+    }
+}
+
+function fetchLatestNewBundle() {
+    $client = new rabbitMQClient("testRabbitMQ.ini", "deploymentMQ");
+
+    $request = [
+        'type' => 'fetch_latest_bundle',
+    ];
+
+    $response = $client->send_request($request);
+
+    if ($response['status'] === 'success') {
+        return $response['bundle'];
+    } else {
+        echo "Failed to fetch latest bundle metadata: " . $response['message'] . "\n";
+        return null;
+    }
+}
+
+// scp things
+// deploy vm ip
+$deployServer = '192.168.194.182';
+$deployPath = '/var/deploy/bundles';
+$qaPath = '/var/qa/bundles';
+// ssh username for qa
+$username = 'matt';
+// ssh key path
+$sshKey = '../../.ssh/id_rsa';
+
+$latestBundle = fetchLatestNewBundle();
+
+if ($latestBundle) {
+    echo "Latest bundle to install: " . $latestBundle['bundle_name'] . "\n";
+
+    if (transferBundleFromDeploy($latestBundle['bundle_name'], $deployServer, $deployPath, $qaPath, $username, $sshKey)) {
+        if (installBundleOnQA($latestBundle['bundle_name'], $qaPath)) {
+            echo "Bundle installed successfully on QA.\n";
+        } else {
+            echo "Failed to install bundle on QA.\n";
+        }
+    }
+}
 ?>
