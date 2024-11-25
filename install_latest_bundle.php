@@ -57,8 +57,8 @@ function fetchLatestNewBundle() {
 $deployServer = '192.168.194.182';
 $deployPath = '/var/deploy/bundles';
 $qaPath = '/var/qa/bundles';
-// ssh username for qa
-$username = 'matt';
+// ssh username for deploy
+$username = 'omarh';
 // ssh key path
 $sshKey = '../../.ssh/id_rsa';
 
