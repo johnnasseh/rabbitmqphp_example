@@ -35,6 +35,26 @@ function installBundleOnQA($bundleName, $qaPath) {
     }
 }
 
+function updateBundleStatus($bundleName) {
+    $client = new rabbitMQClient("testRabbitMQ.ini", "deploymentMQ");
+
+    $request = [
+        'type' => 'update_bundle_status',
+        'bundle_name' => $bundleName,
+        'status' => 'installed',
+    ];
+
+    $response = $client->send_request($request);
+
+    if ($response['status'] === 'success') {
+        echo "Bundle status updated to 'installed' in the database.\n";
+        return true;
+    } else {
+        echo "Failed to update bundle status: " . $response['message'] . "\n";
+        return false;
+    }
+}
+
 function fetchLatestNewBundle() {
     $client = new rabbitMQClient("testRabbitMQ.ini", "deploymentMQ");
 
