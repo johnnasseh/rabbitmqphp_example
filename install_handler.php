@@ -8,7 +8,7 @@ require_once('deploy_mysqlconnect.php');
 function fetchLatestNewBundle() {
     $db = getDeployDB();
 
-    $query = $db->prepare("SELECT bundle_name, bundle_path FROM Bundles WHERE status = 'new' ORDER BY bundle_id DESC LIMIT 1");
+    $query = $db->prepare("SELECT bundle_name, bundle_path FROM Bundles WHERE status IN ('new', 'installed') ORDER BY bundle_id DESC LIMIT 1");
     $query->execute();
     $result = $query->get_result();
 
@@ -22,6 +22,18 @@ function fetchLatestNewBundle() {
             'status' => 'error',
             'message' => 'No new bundles available',
         ];
+    }
+}
+
+function updateBundleStatus($bundleName, $status) {
+    $db = getDeployDB();
+
+    $query = $db->prepare("UPDATE Bundles SET status = ? WHERE bundle_name = ?");
+    $query->bind_param('ss', $status, $bundleName);
+    if ($query->execute()) {
+        return ["status" => "success", "message" => "Bundle status updated to '$status'"];
+    } else {
+        return ["status" => "error", "message" => "Failed to update bundle status: " . $query->error];
     }
 }
 
