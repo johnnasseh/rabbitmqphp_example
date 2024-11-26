@@ -1,32 +1,57 @@
 <?php
-require_once('deploy_mysqlconnect.php');
+require_once('path.inc');
+require_once('get_host_info.inc');
+require_once('rabbitMQLib.inc');
 
-function markBundleStatus($status) {
-    if (!in_array($status, ['passed', 'failed'])) {
-        echo "Invalid status: $status\n";
-        return;
-    }
+function fetchLatestInstalledBundle() {
+    $client = new rabbitMQClient("testRabbitMQ.ini", "deploymentMQ");
 
-    $db = getDeployDB();
-    $query = $db->prepare("SELECT bundle_name FROM Bundles WHERE status = 'installed' ORDER BY id DESC LIMIT 1");
-    $query->execute();
-    $result = $query->get_result();
+    $request = [
+        'type' => 'fetch_latest_installed_bundle'
+    ];
 
-    if ($row = $result->fetch_assoc()) {
-        $update = $db->prepare("UPDATE Bundles SET status = ? WHERE bundle_name = ?");
-        $update->bind_param("ss", $status, $row['bundle_name']);
-        $update->execute();
+    $response = $client->send_request($request);
 
-        echo "Bundle marked as $status.\n";
+    if ($response['status'] === 'success') {
+        return $response['bundle'];
     } else {
-        echo "No installed bundles available.\n";
+        echo "Failed to fetch latest installed bundle: " . $response['message'] . "\n";
+        return null;
     }
 }
 
-$status = $argv[1] ?? null;
-if ($status) {
-    markBundleStatus($status);
-} else {
-    echo "Usage: php mark_bundle_status.php <passed|failed>\n";
+function updateBundleStatus($bundleId, $status) {
+    $client = new rabbitMQClient("testRabbitMQ.ini", "deploymentMQ");
+
+    $request = [
+        'type' => 'update_bundle_status',
+        'bundle_id' => $bundleId,
+        'status' => $status
+    ];
+
+    $response = $client->send_request($request);
+
+    if ($response['status'] === 'success') {
+        echo "Bundle status updated to '$status'.\n";
+    } else {
+        echo "Failed to update bundle status: " . $response['message'] . "\n";
+    }
+}
+
+$latestBundle = fetchLatestInstalledBundle();
+if ($latestBundle) {
+    echo "Latest installed bundle:\n";
+    echo "ID: " . $latestBundle['bundle_id'] . "\n";
+    echo "Name: " . $latestBundle['bundle_name'] . "\n";
+
+    $status = readline("Enter 'pass' or 'fail' to mark bundle: ");
+
+    if (strtolower($status) === 'pass') {
+        updateBundleStatus($latestBundle['bundle_id'], 'passed');
+    } elseif (strtolower($status) === 'fail') {
+        updateBundleStatus($latestBundle['bundle_id'], 'failed');
+    } else {
+        echo "Invalid input. No changes made.\n";
+    }
 }
 ?>
