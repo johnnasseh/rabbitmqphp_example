@@ -4,7 +4,7 @@ require_once('get_host_info.inc');
 require_once('rabbitMQLib.inc');
 
 function fetchLatestInstalledBundle() {
-    $client = new rabbitMQClient("testRabbitMQ.ini", "deploymentMQ");
+    $client = new rabbitMQClient("testRabbitMQ.ini", "markingMQ");
 
     $request = [
         'type' => 'fetch_latest_installed_bundle'
@@ -21,7 +21,7 @@ function fetchLatestInstalledBundle() {
 }
 
 function updateBundleStatus($bundleId, $status) {
-    $client = new rabbitMQClient("testRabbitMQ.ini", "deploymentMQ");
+    $client = new rabbitMQClient("testRabbitMQ.ini", "markingMQ");
 
     $request = [
         'type' => 'update_bundle_status',
