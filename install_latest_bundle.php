@@ -89,7 +89,7 @@ if ($latestBundle) {
 
     if (transferBundleFromDeploy($latestBundle['bundle_name'], $deployServer, $deployPath, $qaPath, $username, $sshKey)) {
         if (installBundleOnQA($latestBundle['bundle_name'], $qaPath)) {
-            if (updateBundleStatus($latestBundle['bundle_name'])) {
+            updateBundleStatus($latestBundle['bundle_name']);
                 echo "Bundle status updated to 'installed'.\n";
             }
         } else {
