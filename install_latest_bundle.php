@@ -96,5 +96,4 @@ if ($latestBundle) {
             echo "Failed to install bundle on QA.\n";
         }
     }
-}
 ?>
