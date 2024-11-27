@@ -89,7 +89,9 @@ if ($latestBundle) {
 
     if (transferBundleFromDeploy($latestBundle['bundle_name'], $deployServer, $deployPath, $qaPath, $username, $sshKey)) {
         if (installBundleOnQA($latestBundle['bundle_name'], $qaPath)) {
-            echo "Bundle installed successfully on QA.\n";
+            if (updateBundleStatus($latestBundle['bundle_name'])) {
+                echo "Bundle status updated to 'installed'.\n";
+            }
         } else {
             echo "Failed to install bundle on QA.\n";
         }
