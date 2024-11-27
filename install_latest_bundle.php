@@ -36,7 +36,7 @@ function installBundleOnQA($bundleName, $qaPath) {
 }
 
 function fetchLatestNewBundle() {
-    $client = new rabbitMQClient("testRabbitMQ.ini", "deploymentMQ");
+    $client = new rabbitMQClient("testRabbitMQ.ini", "installMQ");
 
     $request = [
         'type' => 'fetch_latest_bundle',
