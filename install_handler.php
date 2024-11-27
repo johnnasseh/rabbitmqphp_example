@@ -40,7 +40,10 @@ function updateBundleStatus($bundleName, $status) {
 function requestProcessor($request) {
     if ($request['type'] === 'fetch_latest_bundle') {
         return fetchLatestNewBundle();
+    } elseif ($request['type'] === 'update_bundle_status') {
+        return updateBundleStatus($request['bundle_name'], $request['status']);
     }
+
 
     return ["status" => "error", "message" => "Invalid request type"];
 }
