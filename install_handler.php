@@ -48,6 +48,6 @@ function requestProcessor($request) {
     return ["status" => "error", "message" => "Invalid request type"];
 }
 
-$server = new rabbitMQServer("testRabbitMQ.ini", "deploymentMQ");
+$server = new rabbitMQServer("testRabbitMQ.ini", "installMQ");
 $server->process_requests('requestProcessor');
 ?>
