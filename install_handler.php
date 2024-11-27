@@ -5,10 +5,10 @@ require_once('get_host_info.inc');
 require_once('rabbitMQLib.inc');
 require_once('deploy_mysqlconnect.php');
 
-function fetchLatestNewBundle() {
+function fetchLatestBundle() {
     $db = getDeployDB();
 
-    $query = $db->prepare("SELECT bundle_name, bundle_path FROM Bundles WHERE status = 'new' ORDER BY bundle_id DESC LIMIT 1");
+    $query = $db->prepare("SELECT bundle_name, bundle_path FROM Bundles ORDER BY bundle_id DESC LIMIT 1");
     $query->execute();
     $result = $query->get_result();
 
@@ -20,7 +20,7 @@ function fetchLatestNewBundle() {
     } else {
         return [
             'status' => 'error',
-            'message' => 'No new bundles available',
+            'message' => 'No bundles available',
         ];
     }
 }
@@ -39,11 +39,10 @@ function updateBundleStatus($bundleName, $status) {
 
 function requestProcessor($request) {
     if ($request['type'] === 'fetch_latest_bundle') {
-        return fetchLatestNewBundle();
+        return fetchLatestBundle();
     } elseif ($request['type'] === 'update_bundle_status') {
         return updateBundleStatus($request['bundle_name'], $request['status']);
     }
-
 
     return ["status" => "error", "message" => "Invalid request type"];
 }
