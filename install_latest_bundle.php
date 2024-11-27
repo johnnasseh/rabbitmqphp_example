@@ -36,7 +36,7 @@ function installBundleOnQA($bundleName, $qaPath) {
 }
 
 function updateBundleStatus($bundleName) {
-    $client = new rabbitMQClient("testRabbitMQ.ini", "installMQ");
+    $client = new rabbitMQClient("testRabbitMQ.ini", "deploymentMQ");
 
     $request = [
         'type' => 'update_bundle_status',
@@ -55,8 +55,8 @@ function updateBundleStatus($bundleName) {
     }
 }
 
-function fetchLatestNewBundle() {
-    $client = new rabbitMQClient("testRabbitMQ.ini", "installMQ");
+function fetchLatestBundle() {
+    $client = new rabbitMQClient("testRabbitMQ.ini", "deploymentMQ");
 
     $request = [
         'type' => 'fetch_latest_bundle',
@@ -82,7 +82,7 @@ $username = 'omarh';
 // ssh key path
 $sshKey = '../../.ssh/id_rsa';
 
-$latestBundle = fetchLatestNewBundle();
+$latestBundle = fetchLatestBundle();
 
 if ($latestBundle) {
     echo "Latest bundle to install: " . $latestBundle['bundle_name'] . "\n";
@@ -90,10 +90,9 @@ if ($latestBundle) {
     if (transferBundleFromDeploy($latestBundle['bundle_name'], $deployServer, $deployPath, $qaPath, $username, $sshKey)) {
         if (installBundleOnQA($latestBundle['bundle_name'], $qaPath)) {
             updateBundleStatus($latestBundle['bundle_name']);
-                echo "Bundle status updated to 'installed'.\n";
-            }
         } else {
             echo "Failed to install bundle on QA.\n";
         }
     }
+}
 ?>
