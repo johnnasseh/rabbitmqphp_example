@@ -5,50 +5,81 @@ require_once('get_host_info.inc');
 require_once('rabbitMQLib.inc');
 require_once('deploy_mysqlconnect.php');
 
-function fetchLatestInstalledBundle() {
+function markLatestNewBundleAsPassed() {
     $db = getDeployDB();
 
-    $query = $db->prepare("SELECT bundle_id, bundle_name FROM Bundles WHERE status = 'installed' ORDER BY bundle_id DESC LIMIT 1");
+    // fetches latest new bundle
+    $query = $db->prepare("SELECT bundle_name FROM Bundles WHERE status = 'new' ORDER BY bundle_id DESC LIMIT 1");
     $query->execute();
     $result = $query->get_result();
 
     if ($row = $result->fetch_assoc()) {
-        return [
-            'status' => 'success',
-            'bundle' => $row
-        ];
+        $bundleName = $row['bundle_name'];
+
+        // updates status to passed 
+        $update = $db->prepare("UPDATE Bundles SET status = 'passed' WHERE bundle_name = ?");
+        $update->bind_param('s', $bundleName);
+
+        if ($update->execute()) {
+            return [
+                'status' => 'success',
+                'bundle_name' => $bundleName,
+                'message' => "Bundle marked as 'passed'"
+            ];
+        } else {
+            return [
+                'status' => 'error',
+                'message' => "Failed to update bundle status: " . $update->error
+            ];
+        }
     } else {
         return [
             'status' => 'error',
-            'message' => 'No installed bundles found'
+            'message' => 'No new bundles available to mark as passed'
         ];
     }
 }
 
-function updateBundleStatus($bundleId, $status) {
+function markLatestNewBundleAsFailed() {
     $db = getDeployDB();
 
-    $query = $db->prepare("UPDATE Bundles SET status = ? WHERE bundle_id = ?");
-    $query->bind_param("si", $status, $bundleId);
+    // fetches latest new bundle
+    $query = $db->prepare("SELECT bundle_name FROM Bundles WHERE status = 'new' ORDER BY bundle_id DESC LIMIT 1");
+    $query->execute();
+    $result = $query->get_result();
 
-    if ($query->execute()) {
-        return [
-            'status' => 'success',
-            'message' => "Bundle status updated to '$status'"
-        ];
+    if ($row = $result->fetch_assoc()) {
+        $bundleName = $row['bundle_name'];
+
+        // updates status to failed
+        $update = $db->prepare("UPDATE Bundles SET status = 'failed' WHERE bundle_name = ?");
+        $update->bind_param('s', $bundleName);
+
+        if ($update->execute()) {
+            return [
+                'status' => 'success',
+                'bundle_name' => $bundleName,
+                'message' => "Bundle marked as 'failed'"
+            ];
+        } else {
+            return [
+                'status' => 'error',
+                'message' => "Failed to update bundle status: " . $update->error
+            ];
+        }
     } else {
         return [
             'status' => 'error',
-            'message' => "Failed to update bundle status: " . $query->error
+            'message' => 'No new bundles available to mark as failed'
         ];
     }
 }
 
 function requestProcessor($request) {
-    if ($request['type'] === 'fetch_latest_installed_bundle') {
-        return fetchLatestInstalledBundle();
-    } elseif ($request['type'] === 'update_bundle_status') {
-        return updateBundleStatus($request['bundle_id'], $request['status']);
+    if ($request['type'] === 'mark_latest_as_passed') {
+        return markLatestNewBundleAsPassed();
+    } elseif ($request['type'] === 'mark_latest_as_failed') {
+        return markLatestNewBundleAsFailed();
     }
 
     return ["status" => "error", "message" => "Invalid request type"];
