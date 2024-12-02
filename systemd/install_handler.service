@@ -1,0 +1,13 @@
+[Unit]
+Description=Install Service
+After=network.target
+StartLimitIntervalSec=0
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=matt
+ExecStart=/home/matt/project/rabbitmqphp_example/install_handler.php
+
+[Install]
+WantedBy=multi-user.target
