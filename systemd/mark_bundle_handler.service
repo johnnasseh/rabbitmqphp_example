@@ -1,0 +1,13 @@
+[Unit]
+Description=Marking Service
+After=network.target
+StartLimitIntervalSec=0
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=matt
+ExecStart=/home/matt/project/rabbitmqphp_example/mark_bundle_handler.php
+
+[Install]
+WantedBy=multi-user.target
