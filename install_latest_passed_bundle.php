@@ -36,7 +36,7 @@ function installBundleOnProd($bundleName, $prodPath) {
 }
 
 function fetchLatestPassedBundle() {
-    $client = new rabbitMQClient("testRabbitMQ.ini", "installMQ");
+    $client = new rabbitMQClient("testRabbitMQ.ini", "installprodMQ");
 
     $request = [
         'type' => 'fetch_latest_passed_bundle',
@@ -54,7 +54,7 @@ function fetchLatestPassedBundle() {
 
 // scp things
 // deploy vm ip
-$deployServer = '192.168.194.182'; 
+$deployServer = '10.147.17.182'; 
 $deployPath = '/var/deploy/bundles';
 $prodPath = '/var/prod/bundles';
 // ssh username for deploy
