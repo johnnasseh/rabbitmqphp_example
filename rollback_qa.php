@@ -54,7 +54,7 @@ function fetchPreviousPassedBundle() {
 
 // scp things
 // deploy vm ip
-$deployServer = '192.168.194.182';
+$deployServer = '10.242.1.158';
 $deployPath = '/var/deploy/bundles';
 $qaPath = '/var/qa/bundles';
 // ssh username for deploy
