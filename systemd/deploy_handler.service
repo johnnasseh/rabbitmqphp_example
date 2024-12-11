@@ -6,8 +6,8 @@ StartLimitIntervalSec=0
 Type=simple
 Restart=always
 RestartSec=1
-User=matt
-ExecStart=/home/matt/project/rabbitmqphp_example/deploy_handler.php
+User=omarh
+ExecStart=/~/it490/rabbitmqphp_example/deploy_handler.php
 
 [Install]
 WantedBy=multi-user.target
