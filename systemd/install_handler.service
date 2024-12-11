@@ -7,7 +7,7 @@ Type=simple
 Restart=always
 RestartSec=1
 User=omarh
-ExecStart=~/it490/rabbitmqphp_example/install_handler.php
+ExecStart=home/it490/rabbitmqphp_example/install_handler.php
 
 [Install]
 WantedBy=multi-user.target
