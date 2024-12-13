@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Receive Email Notification</title>
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+	<div class="container mt-5">
+    	<h1>Receive Event Email</h1>
+    	<p>Click the button below to receive an email about an upcoming event!</p>
+    	<button id="sendEmailBtn" class="btn btn-primary">Send Email</button>
+    	<p id="responseMessage" class="mt-3"></p>
+	</div>
+
+	<script>
+    	document.getElementById('sendEmailBtn').addEventListener('click', function() {
+        	const token = localStorage.getItem("token");
+        	if (!token) {
+            	alert("You must be logged in to send emails.");
+            	window.location.href = "index.html";
+            	return;
+        	}
+
+        	fetch('send_email_handler.php', {
+            	method: 'POST',
+            	headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            	body: `token=${encodeURIComponent(token)}`
+        	})
+        	.then(response => response.json())
+        	.then(data => {
+            	const responseMessage = document.getElementById('responseMessage');
+            	if (data.status === 'success') {
+                	responseMessage.innerText = "Email sent successfully!";
+                	responseMessage.classList.add('text-success');
+            	} else {
+                	responseMessage.innerText = `Failed to send email: ${data.message}`;
+                	responseMessage.classList.add('text-danger');
+            	}
+        	})
+        	.catch(error => console.error('Error:', error));
+    	});
+	</script>
+</body>
+</html>
