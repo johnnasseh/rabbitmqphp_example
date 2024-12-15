@@ -37,8 +37,15 @@ function handleRequest($request) {
     appendLogToFile($logMessage);
    error_log("Log message written to file: " . $logMessage, 4);
 }
-
 $server = new rabbitMQServer("testRabbitMQ.ini", "logsMQ");
-$server->process_requests('handleRequest');
-?>
 
+// infinite loop to listen for messages
+while (true) {
+    try {
+        $server->process_requests('handleRequest');
+    } catch (Exception $e) {
+        error_log("Error in log handler: " . $e->getMessage());
+        sleep(1); 
+    }
+}
+?>
