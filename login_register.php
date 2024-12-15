@@ -1,10 +1,13 @@
 #!/usr/bin/php
 <?php
+
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
 require_once('path.inc');
 require_once('get_host_info.inc');
 require_once('rabbitMQLib.inc');
 require_once('mysqlconnect.php');
-require_once('vendor/autoload.php');
+//require_once('vendor/autoload.php');
 require_once('log_utils.php');
 
 use Firebase\JWT\JWT;
