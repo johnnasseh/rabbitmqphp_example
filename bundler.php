@@ -5,8 +5,8 @@ require_once('rabbitMQLib.inc');
 
 function getBundleNameFromArgs($argv) {
     if (count($argv) < 2) {
-        echo "Error: provide bundle name\n";
-        echo "Example: php bundler.php (bundle_name)\n";
+        echo "Error: Please provide a bundle name as the first argument.\n";
+        echo "Usage: php bundler.php <bundle_name>\n";
         exit(1);
     }
     return $argv[1];
@@ -25,7 +25,6 @@ function getModifiedFiles() {
 
 function getDependencies($file) {
     $dependencies = [];
-
     $extension = pathinfo($file, PATHINFO_EXTENSION);
 
     if ($extension === 'php') {
@@ -55,14 +54,8 @@ function getDependencies($file) {
         $dependencies = array_merge($dependencies, $imgMatches[1]);
     }
 
-    $dependencies = array_filter(array_map(function($path) use ($file) {
-        $resolvedPath = realpath(dirname($file) . '/' . $path);
-        return file_exists($resolvedPath) ? $resolvedPath : null;
-    }, $dependencies));
-
-    return array_unique($dependencies);
+    return array_filter($dependencies, 'file_exists');
 }
-
 
 function createBundle($files, $bundleName) {
     $tempDir = '/tmp/bundle_temp/';
@@ -95,37 +88,24 @@ function createBundle($files, $bundleName) {
     }
 }
 
-function getNextVersion($bundleName) {
+function registerAndVersionBundle($bundleName, $path) {
     $client = new rabbitMQClient("testRabbitMQ.ini", "deploymentMQ");
     $request = [
-        'type' => 'get_next_version',
+        'type' => 'get_version_and_register',
         'bundle_name' => $bundleName,
-    ];
-    $response = $client->send_request($request);
-    return $response['version'] ?? 1;
-}
-
-function registerBundle($bundleName, $version, $path) {
-    $client = new rabbitMQClient("testRabbitMQ.ini", "deploymentMQ");
-    $request = [
-        'type' => 'register_bundle',
-        'bundle_name' => $bundleName,
-        'version' => $version,
-        'status' => 'new',
         'path' => $path,
     ];
     $response = $client->send_request($request);
     if ($response['status'] === 'success') {
-        echo "Bundle registered successfully.\n";
+        return $response['version'];
     } else {
-        echo "Failed to register bundle: " . $response['message'] . "\n";
+        echo "Error registering bundle: " . $response['message'] . "\n";
+        exit(1);
     }
 }
 
 function transferBundleWithSCP($bundlePath, $remoteServer, $remotePath, $username, $sshKey) {
     $command = "scp -i $sshKey $bundlePath $username@$remoteServer:$remotePath";
-    echo "Executing SCP command: $command\n";
-
     exec($command, $output, $returnVar);
     if ($returnVar === 0) {
         echo "Bundle successfully transferred to $remoteServer.\n";
@@ -151,20 +131,17 @@ foreach ($modifiedFiles as $file) {
 }
 $allFiles = array_unique($allFiles);
 
-$version = getNextVersion($bundleName);
-$finalBundleName = "{$bundleName}_v{$version}";
+// scp values
+$remoteServer = '192.168.194.182';
+$remotePath = '/var/deploy/bundles/';
+$username = 'omarh';
+$sshKey = '../../.ssh/id_rsa';
 
-$bundlePath = createBundle($allFiles, $finalBundleName);
-
+$bundlePath = createBundle($allFiles, $bundleName);
 if ($bundlePath) {
-    // scp values
-    $remoteServer = '192.168.194.182';
-    $remotePath = '/var/deploy/bundles/';
-    $username = 'omarh';
-    $sshKey = '../../.ssh/id_rsa'; 
-
     if (transferBundleWithSCP($bundlePath, $remoteServer, $remotePath, $username, $sshKey)) {
-        registerBundle($bundleName, $version, $remotePath . $finalBundleName . '.tar.gz');
+        $version = registerAndVersionBundle($bundleName, $remotePath . basename($bundlePath));
+        echo "Bundle successfully registered with version: $version\n";
     }
 }
 ?>
