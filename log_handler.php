@@ -11,6 +11,7 @@ error_log("log handler started", 4);
 date_default_timezone_set('America/New_York');
 $env = parse_ini_file('.env');
 $machineId = $env['MACHINE_ID'] ?? 'UnknownMachine';
+error_log("Machine ID loaded in log_handler: " . $machineId, 4);
 $queueName = "log_" . $machineId;
 
 error_log("Log handler started for machine: $machineId", 4);

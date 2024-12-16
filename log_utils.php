@@ -7,6 +7,7 @@ function log_message($message)
 	global $logServer;
 	$env = parse_ini_file('.env');
 	$machineId = $env['MACHINE_ID'] ?? 'UnknownMachine';
+	error_log("Machine ID loaded in log_utils: " . $machineId, 4);
 	$hostname = gethostname();
 
     $logRequest = array(
