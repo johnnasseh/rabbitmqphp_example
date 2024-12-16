@@ -34,7 +34,7 @@ function appendLogToFIle($message) {
 
 function handleRequest($request) {
 	global $machineId;
-    error_log("Received log request on $machineId:", 4);
+    error_log("Received log request on " . $GLOBALS['machineId'] .":", 4);
     error_log(print_r($request, true), 4);
    if (!isset($request['message'])) {
         error_log("Invalid log request received", 4);
