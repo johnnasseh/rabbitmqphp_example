@@ -10,6 +10,8 @@ function log_message($message)
 	error_log("Machine ID loaded in log_utils: " . $machineId, 4);
 	$hostname = gethostname();
 
+	error_log("log_message() called. Machine ID: {$machineId}, Hostname: {$hostname}", 4);
+
     $logRequest = array(
         'type' => 'log',
         'message' => $message,
