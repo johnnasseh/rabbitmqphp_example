@@ -9,6 +9,11 @@ ini_set('display_startup_errors', 1);
 error_reporting(E_ALL & ~E_DEPRECATED);
 error_log("log handler started", 4);
 date_default_timezone_set('America/New_York');
+$env = parse_ini_file('.env');
+$machineId = $env['MACHINE_ID'] ?? 'UnknownMachine';
+$queueName = "log_" . $machineId;
+
+error_log("Log handler started for machine: $machineId", 4);
 
 function appendLogToFIle($message) {
 	$logFile = '/etc/logs/logfile.log';
@@ -27,7 +32,8 @@ function appendLogToFIle($message) {
 }
 
 function handleRequest($request) {
-    error_log("Received log request:", 4);
+	global $machineId;
+    error_log("Received log request on $machineId:", 4);
     error_log(print_r($request, true), 4);
    if (!isset($request['message'])) {
         error_log("Invalid log request received", 4);
@@ -38,14 +44,15 @@ function handleRequest($request) {
    error_log("Log message written to file: " . $logMessage, 4);
 }
 $server = new rabbitMQServer("testRabbitMQ.ini", "logsMQ");
-
-// infinite loop to listen for messages
+//$server->set_queue($queueName);
 while (true) {
     try {
+        // dynamically bind the machine-specific queue
+      //  $server->declare_queue($queueName, 'logExchange', 'fanout');
         $server->process_requests('handleRequest');
     } catch (Exception $e) {
-        error_log("Error in log handler: " . $e->getMessage());
-        sleep(1); 
+        error_log("Error in log handler: " . $e->getMessage(), 4);
+        sleep(1);
     }
 }
 ?>
