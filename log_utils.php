@@ -12,8 +12,10 @@ function log_message($message)
 
     $logRequest = array(
         'type' => 'log',
-        'message' => "[{$hostname}, {$machineId}] " . $message,
-        'timestamp' => date('m-d-Y H:i:s'),
+        'message' => $message,
+	'timestamp' => date('m-d-Y H:i:s'),
+	        'origin_machine' => $machineId,
+        'origin_hostname' => $hostname,
     );
 
     try {

@@ -39,8 +39,10 @@ function handleRequest($request) {
    if (!isset($request['message'])) {
         error_log("Invalid log request received", 4);
         return;
-    }
-   $logMessage = $request['message'];
+   }
+        $originMachine = $request['origin_machine'] ?? 'UnknownMachine';
+    $originHostname = $request['origin_hostname'] ?? 'UnknownHost';
+   $logMessage = "[Origin: {$originMachine}, Host: {$originHostname}] " . $request['message'];
     appendLogToFile($logMessage);
    error_log("Log message written to file: " . $logMessage, 4);
 }
