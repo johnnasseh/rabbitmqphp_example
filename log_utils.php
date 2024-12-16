@@ -1,14 +1,14 @@
 <?php
-$env = parse_ini_file('.env');
-    $machineId = $env['MACHINE_ID'] ?? 'UnknownMachine';
 
 $logServer = new rabbitMQClient("testRabbitMQ.ini", "logsMQ");
 
 function log_message($message)
 {
-    global $logServer, $machineId;
+	global $logServer;
+	$env = parse_ini_file('.env');
+	$machineId = $env['MACHINE_ID'] ?? 'UnknownMachine';
+	$hostname = gethostname();
 
-    $hostname = gethostname();
     $logRequest = array(
         'type' => 'log',
         'message' => "[{$hostname}, {$machineId}] " . $message,
