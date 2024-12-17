@@ -8,7 +8,7 @@ function log_message($message)
 	$env = parse_ini_file('.env');
 	$machineId = $env['MACHINE_ID'] ?? 'UnknownMachine';
 	error_log("Machine ID loaded in log_utils: " . $machineId, 4);
-	$hostname = gethostname();
+	$hostname = gethostname() ?: 'UnknownHost';
 
 	error_log("log_message() called. Machine ID: {$machineId}, Hostname: {$hostname}", 4);
 
