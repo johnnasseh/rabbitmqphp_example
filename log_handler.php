@@ -43,7 +43,7 @@ function handleRequest($request) {
         $originMachine = $request['origin_machine'] ?? 'UnknownMachine';
     $originHostname = $request['origin_hostname'] ?? 'UnknownHost';
    $logMessage = $request['message'] ?? 'No message';
-    appendLogToFile("[Origin: $originMachine, Host: $originHost] " . $logMessage);
+    appendLogToFile("[Origin: $originMachine, Host: $originHostname] " . $logMessage);
    error_log("Log message written to file: " . $logMessage, 4);
 }
 $server = new rabbitMQServer("testRabbitMQ.ini", "logsMQ");
