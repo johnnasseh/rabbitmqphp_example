@@ -7,7 +7,7 @@ require_once('path.inc');
 require_once('get_host_info.inc');
 require_once('rabbitMQLib.inc');
 require_once('mysqlconnect.php');
-//require_once('vendor/autoload.php');
+require_once('vendor/autoload.php');
 require_once('log_utils.php');
 
 use Firebase\JWT\JWT;
@@ -16,7 +16,8 @@ use Firebase\JWT\Key;
 $env = parse_ini_file('.env');
 $mydb = getDB();
 $jwt_key = $env['JWT_SECRET']; 
-
+$triggerMachine = $_SERVER['HTTP_X_ORIGIN_MACHINE'] ?? 'UnknownMachine';
+$triggerHost = $_SERVER['HTTP_X_ORIGIN_HOST'] ?? 'UnknownHost';
 // register function: handles user registration
 function doRegister($username, $password, $email)
 {
@@ -31,7 +32,7 @@ function doRegister($username, $password, $email)
 
     if ($result->num_rows > 0) {
 	// logging error message
-	log_message("Registration failed: Username or email already exists. Username: $username, Email: $email");    
+	log_message("Registration failed: Username or email already exists. Username: $username, Email: $email", $triggerMachine, $triggerHost);    
     // return failure if username or email exists
         return ["status" => "fail", "message" => "Username or email already exists."];
     }
