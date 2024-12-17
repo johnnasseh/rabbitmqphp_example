@@ -13,11 +13,9 @@ require_once('log_utils.php');
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 
-$env = parse_ini_file(__DIR__ . '/.env');
+$env = parse_ini_file('.env');
 $mydb = getDB();
 $jwt_key = $env['JWT_SECRET']; 
-$machineId = $env['MACHINE_ID'] ?? 'UnknownMachine';
-$hostname = gethostname() ?: 'UnknownHost';
 // register function: handles user registration
 function doRegister($username, $password, $email)
 {
@@ -32,7 +30,7 @@ function doRegister($username, $password, $email)
 
     if ($result->num_rows > 0) {
 	// logging error message
-	log_message("Registration failed: Username or email already exists. Username: $username, Email: $email, Machine: $machineId, Host: $hostname");    
+	log_message("Registration failed: Username or email already exists. Username: $username, Email: $email");    
     // return failure if username or email exists
         return ["status" => "fail", "message" => "Username or email already exists."];
     }
