@@ -21,7 +21,7 @@ $hostname = gethostname() ?: 'UnknownHost';
 // register function: handles user registration
 function doRegister($username, $password, $email)
 {
-    global $mydb, $jwt_key;
+    global $mydb, $jwt_key, $machineId, $hostname;
 
     // check if the username or email already exists in the Users table
     $sql = "SELECT * FROM Users WHERE username = ? OR email = ?";
