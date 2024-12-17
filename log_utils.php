@@ -1,27 +1,25 @@
 <?php
 require_once('rabbitMQLib.inc');
 
-        $env = parse_ini_file(__DIR__ . '/.env');
-        $globalMachineId = $env['MACHINE_ID'] ?? 'UnknownMachine';
-        $globalHostname = gethostname();
-
 $logServer = new rabbitMQClient("testRabbitMQ.ini", "logsMQ");
 
-function log_message($message)
+function log_message($message, $originMachine = null, $originHost = null)
 {
-	global $logServer, $globalMachineId, $globalHostname;
-	    $originMachine = !empty($globalMachineId) ? $globalMachineId : 'UnknownMachine';
-	error_log("Machine ID loaded in log_utils: " . $machineId, 4);
-	    $originHost = !empty($globalHostname) ? $globalHostname : 'UnknownHost';
+	global $logServer;
+	        $env = parse_ini_file(__DIR__ . '/.env');
+        $localMachineId = $env['MACHINE_ID'] ?? 'UnknownMachine';
+        $localHostname = gethostname();
 
+	    $machineId = $originMachine ?? $localMachineId;
+    $hostname = $originHost ?? $localHostname;
 	error_log("log_message() called. Machine ID: {$machineId}, Hostname: {$hostname}", 4);
 
     $logRequest = array(
         'type' => 'log',
         'message' => $message,
 	'timestamp' => date('m-d-Y H:i:s'),
-	        'origin_machine' => $originMachine,
-        'origin_hostname' => $originHost,
+	        'origin_machine' => $machineId,
+        'origin_hostname' => $hostname,
     );
 
     try {
