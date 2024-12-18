@@ -16,12 +16,12 @@ function fetchBundlePath($bundleName, $version) {
     if ($row = $result->fetch_assoc()) {
         return $row['path'];
     } else {
-        echo "Error: Bundle not found for name '$bundleName' and version '$version'.\n";
+        echo "Error: Bundle not found in database for name '$bundleName' and version '$version'.\n";
         return null;
     }
 }
 
-function installBundle($bundleName, $version, $deployServer, $localPath, $username, $sshKey) {
+function installBundle($bundleName, $version, $deployServer, $localPath, $installPath, $username, $sshKey) {
     $bundlePath = fetchBundlePath($bundleName, $version);
     if (!$bundlePath) {
         return ["status" => "error", "message" => "Bundle path not found in database."];
@@ -35,16 +35,37 @@ function installBundle($bundleName, $version, $deployServer, $localPath, $userna
 
     $bundleFileName = basename($bundlePath);
     $bundleFullPath = "{$localPath}/{$bundleFileName}";
-    $extractCommand = "tar -xzvf $bundleFullPath -C ~/installtest";
+    $tempExtractPath = "/tmp/extracted_bundle";
+
+    if (is_dir($tempExtractPath)) {
+        exec("rm -rf $tempExtractPath");
+    }
+    mkdir($tempExtractPath, 0777, true);
+
+    $extractCommand = "tar -xzvf $bundleFullPath -C $tempExtractPath";
     exec($extractCommand, $extractOutput, $extractReturnVar);
     if ($extractReturnVar !== 0) {
         return ["status" => "error", "message" => "Failed to extract bundle: " . implode("\n", $extractOutput)];
     }
 
-    unlink($bundleFullPath);
+    $syncCommand = "rsync -av --no-group $tempExtractPath/ $installPath/";
+    exec($syncCommand, $syncOutput, $syncReturnVar);
+    if ($syncReturnVar !== 0) {
+        return ["status" => "error", "message" => "Failed to sync files: " . implode("\n", $syncOutput)];
+    }
 
-    echo "Bundle installed successfully.\n";
-    return ["status" => "success", "message" => "Bundle installed successfully."];
+    unlink($bundleFullPath);
+    exec("rm -rf $tempExtractPath");
+
+    $restartCommand = "sudo systemctl restart apache2";
+    exec($restartCommand, $restartOutput, $restartReturnVar);
+
+    if ($restartReturnVar !== 0) {
+        return ["status" => "error", "message" => "Failed to restart Apache: " . implode("\n", $restartOutput)];
+    }
+
+    echo "Bundle installed and Apache restarted successfully to $installPath.\n";
+    return ["status" => "success", "message" => "Bundle installed and Apache restarted successfully to $installPath."];
 }
 
 function requestProcessor($request) {
@@ -54,6 +75,7 @@ function requestProcessor($request) {
             $request['version'],
             $request['deploy_server'],
             $request['local_path'],
+            $request['install_path'],
             $request['username'],
             $request['ssh_key']
         );
@@ -61,7 +83,6 @@ function requestProcessor($request) {
     return ["status" => "error", "message" => "Invalid request type"];
 }
 
-// change to installprodMQ queue for prod
 $server = new rabbitMQServer("testRabbitMQ.ini", "installMQ");
 $server->process_requests('requestProcessor');
 ?>
