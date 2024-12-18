@@ -19,6 +19,7 @@ $request = [
     'version' => $version,
     'deploy_server' => '10.147.17.182',
     'local_path' => '/var/prod/bundles',
+    'install_path' => '/var/www/html',
     'username' => 'omarh',
     'ssh_key' => '../../.ssh/id_rsa'
 ];
