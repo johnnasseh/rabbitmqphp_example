@@ -2,77 +2,47 @@
 require_once('path.inc');
 require_once('get_host_info.inc');
 require_once('rabbitMQLib.inc');
+require_once('deploy_mysqlconnect.php');
 
-function transferBundleFromDeploy($bundleName, $deployServer, $deployPath, $prodPath, $username, $sshKey) {
-    $command = "scp -i $sshKey $username@$deployServer:$deployPath/$bundleName $prodPath";
-    echo "Executing SCP command: $command\n";
-
-    exec($command, $output, $returnVar);
-    if ($returnVar === 0) {
-        echo "Bundle successfully transferred to Production: $bundleName\n";
-        return true;
+function getLatestPassedVersion($bundleName) {
+    $db = getDeployDB();
+    
+    $query = $db->prepare("SELECT version FROM Bundles WHERE bundle_name = ? AND status = 'passed' ORDER BY version DESC LIMIT 1");
+    $query->bind_param('s', $bundleName);
+    $query->execute();
+    $result = $query->get_result();
+    
+    if ($row = $result->fetch_assoc()) {
+        return $row['version'];
     } else {
-        echo "Failed to transfer bundle: " . implode("\n", $output) . "\n";
-        return false;
-    }
-}
-
-function installBundleOnProd($bundleName, $prodPath) {
-    // install directory in prod vm
-    $installPath = '/var/prod_environment';
-    $bundlePath = $prodPath . '/' . $bundleName;
-
-    $zip = new ZipArchive();
-    if ($zip->open($bundlePath) === TRUE) {
-        $zip->extractTo($installPath);
-        $zip->close();
-        unlink($bundlePath);
-        echo "Bundle rolled back and installed successfully on Production.\n";
-        return true;
-    } else {
-        echo "Failed to extract bundle on Production.\n";
-        return false;
-    }
-}
-
-function fetchPreviousPassedBundle() {
-    $client = new rabbitMQClient("testRabbitMQ.ini", "installprodMQ");
-
-    $request = [
-        'type' => 'fetch_previous_passed_bundle',
-    ];
-
-    $response = $client->send_request($request);
-
-    if ($response['status'] === 'success') {
-        return $response['bundle'];
-    } else {
-        echo "Failed to fetch previous passed bundle metadata: " . $response['message'] . "\n";
         return null;
     }
 }
 
-// scp things
-// deploy vm ip
-$deployServer = '10.147.17.182'; 
-$deployPath = '/var/deploy/bundles';
-$prodPath = '/var/prod/bundles';
-// ssh username for deploy
-$username = 'omarh';
-// ssh key path
-$sshKey = '../../.ssh/id_rsa';
-
-$previousBundle = fetchPreviousPassedBundle();
-
-if ($previousBundle) {
-    echo "Previous bundle to rollback: " . $previousBundle['bundle_name'] . "\n";
-
-    if (transferBundleFromDeploy($previousBundle['bundle_name'], $deployServer, $deployPath, $prodPath, $username, $sshKey)) {
-        if (installBundleOnProd($previousBundle['bundle_name'], $prodPath)) {
-            echo "Rollback successful.\n";
-        } else {
-            echo "Failed to install previous bundle on Production.\n";
-        }
-    }
+if ($argc < 2) {
+    echo "Use: php rollback_prod.php (bundle_name)\n";
+    exit(1);
 }
+
+$bundleName = $argv[1];
+$latestVersion = getLatestPassedVersion($bundleName);
+
+if ($latestVersion === null) {
+    echo "Error: No 'passed' version found for bundle '$bundleName'.\n";
+    exit(1);
+}
+
+$client = new rabbitMQClient("testRabbitMQ.ini", "installprodMQ");
+$request = [
+    'type' => 'install_bundle',
+    'bundle_name' => $bundleName,
+    'version' => $latestVersion,
+    'deploy_server' => '10.147.17.182',
+    'local_path' => '/var/prod/bundles',
+    'username' => 'omarh',
+    'ssh_key' => '../../.ssh/id_rsa',
+];
+
+$response = $client->send_request($request);
+echo "Response: " . print_r($response, true) . "\n";
 ?>
