@@ -19,6 +19,7 @@ $request = [
     'version' => $version,
     'deploy_server' => '10.242.1.158',
     'local_path' => '/var/qa/bundles',
+    'install_path' => '/var/www/html',
     'username' => 'omarh',
     'ssh_key' => '../../.ssh/id_rsa'
 ];
@@ -26,4 +27,3 @@ $request = [
 $response = $client->send_request($request);
 echo "Response: " . print_r($response, true) . "\n";
 ?>
-
