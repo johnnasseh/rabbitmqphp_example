@@ -32,6 +32,8 @@ if ($latestVersion === null) {
     exit(1);
 }
 
+$installPath = '/var/www/html';
+
 $client = new rabbitMQClient("testRabbitMQ.ini", "installMQ");
 $request = [
     'type' => 'install_bundle',
@@ -39,10 +41,24 @@ $request = [
     'version' => $latestVersion,
     'deploy_server' => '10.242.1.158',
     'local_path' => '/var/qa/bundles',
+    'install_path' => $installPath,
     'username' => 'omarh',
     'ssh_key' => '../../.ssh/id_rsa',
 ];
 
 $response = $client->send_request($request);
+
 echo "Response: " . print_r($response, true) . "\n";
+
+// restart apache
+if ($response['status'] === 'success') {
+    $restartCommand = "sudo systemctl restart apache2";
+    exec($restartCommand, $restartOutput, $restartReturnVar);
+
+    if ($restartReturnVar === 0) {
+        echo "Apache restarted successfully.\n";
+    } else {
+        echo "Failed to restart Apache: " . implode("\n", $restartOutput) . "\n";
+    }
+}
 ?>
