@@ -1,80 +1,88 @@
 <?php
-require_once('vendor/autoload.php');
-require_once('rabbitMQLib.inc');
-require('nav.php');
+require_once('mysqlconnect.php'); 
+require 'vendor/autoload.php';
 
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 
-$env = parse_ini_file('.env');
-$jwt_secret = $env['JWT_SECRET'];
 
-header('Content-Type: application/json');
+$dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
+$dotenv->load();
+
+$jwt_secret = $_ENV['JWT_SECRET'] ?? '';
+$smtp_host = $_ENV['SMTP_HOST'] ?? '';
+$smtp_user = $_ENV['SMTP_USER'] ?? '';
+$smtp_pass = $_ENV['SMTP_PASS'] ?? '';
+$smtp_port = $_ENV['SMTP_PORT'] ?? '';
+
+$mydb = getDB(); 
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-	$token = $_POST['token'] ?? '';
-	if (!$token) {
-    	echo json_encode(["status" => "fail", "message" => "Token not provided"]);
-    	exit;
-	}
+    $token = $_POST['token'] ?? '';
 
-	try {
-    	$decoded = JWT::decode($token, new Key($jwt_secret, 'HS256'));
-    	$username = $decoded->data->username;
+    if (!$token) {
+        echo json_encode(["status" => "fail", "message" => "Token not provided"]);
+        exit;
+    }
 
-    	$db = new mysqli($env['DB_HOST'], $env['DB_USER'], $env['DB_PASS'], $env['DB_NAME']);
-    	if ($db->connect_error) {
-        	error_log("Database connection failed: " . $db->connect_error);
-        	echo json_encode(["status" => "fail", "message" => "Database connection failed"]);
-        	exit;
-    	}
+    try {
+        $decoded = JWT::decode($token, new Key($jwt_secret, 'HS256'));
+        $username = $decoded->data->username;
 
-    	$stmt = $db->prepare("
-        	SELECT e.title, e.date_start, e.time_start, e.location, e.description, u.email
-        	FROM User_Likes ul
-        	JOIN Events e ON ul.event_id = e.event_id
-        	JOIN Users u ON ul.id = u.id
-        	WHERE u.username = ?
-        	ORDER BY ul.like_date ASC
-        	LIMIT 1
-    	");
-    	$stmt->bind_param('s', $username);
-    	$stmt->execute();
-    	$result = $stmt->get_result();
+        
+        $stmt = $mydb->prepare("
+            SELECT Events.name, Events.date, Events.venue_name, Users.email 
+            FROM Events 
+            JOIN User_Likes ON Events.event_id = User_Likes.event_id 
+            JOIN Users ON User_Likes.user_id = Users.id 
+            WHERE Users.username = ? 
+            LIMIT 1
+        ");
+        $stmt->bind_param('s', $username);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $likedEvent = $result->fetch_assoc();
 
-    	if ($result->num_rows === 0) {
-        	echo json_encode(["status" => "fail", "message" => "No liked events found"]);
-        	exit;
-    	}
+        if (!$likedEvent) {
+            echo json_encode(["status" => "fail", "message" => "No liked events found for the user"]);
+            exit;
+        }
 
-    	$event = $result->fetch_assoc();
+        $email = $likedEvent['email'];
+        $eventName = $likedEvent['name'];
+        $eventDate = $likedEvent['date'];
+        $eventVenue = $likedEvent['venue_name'];
 
-    	$emailData = [
-        	"type" => "send_email",
-        	"email" => $event['email'],
-        	"event_title" => $event['title'],
-        	"event_details" => sprintf(
-            	"Upcoming Event: %s\nDate: %s\nTime: %s\nLocation: %s\nDescription: %s",
-            	$event['title'], $event['date_start'], $event['time_start'], $event['location'], $event['description']
-        	)
-    	];
+        
+        $mail = new PHPMailer(true);
 
-    	$client = new rabbitMQClient("testRabbitMQ.ini", "emailLikesMQ");
-    	$response = $client->send_request($emailData);
+        try {
+            $mail->isSMTP();
+            $mail->Host = $smtp_host;
+            $mail->SMTPAuth = true;
+            $mail->Username = $smtp_user;
+            $mail->Password = $smtp_pass;
+            $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+            $mail->Port = $smtp_port;
 
-    	if ($response['status'] === 'success') {
-        	echo json_encode(["status" => "success", "message" => "Email sent successfully"]);
-    	} else {
-        	echo json_encode(["status" => "fail", "message" => "Failed to send email"]);
-    	}
-	} catch (Exception $e) {
-    	error_log("Token verification failed: " . $e->getMessage());
-    	echo json_encode(["status" => "fail", "message" => "Invalid or expired token"]);
-	}
-} else {
-	echo json_encode(["status" => "fail", "message" => "Invalid request method"]);
+            $mail->setFrom($smtp_user, 'Event Notifications');
+            $mail->addAddress($email);
+
+            $mail->isHTML(true);
+            $mail->Subject = 'Your Upcoming Event!';
+            $mail->Body = "Hello $username, <br> Don't forget your liked event: <strong>$eventName</strong> happening on <strong>$eventDate</strong> at <strong>$eventVenue</strong>.";
+
+            $mail->send();
+            echo json_encode(["status" => "success", "message" => "Email sent!"]);
+        } catch (Exception $e) {
+            error_log("Mailer Error: {$mail->ErrorInfo}");
+            echo json_encode(["status" => "fail", "message" => "Email could not be sent: {$mail->ErrorInfo}"]);
+        }
+    } catch (Exception $e) {
+        error_log("JWT Error: {$e->getMessage()}");
+        echo json_encode(["status" => "fail", "message" => "Invalid or expired token"]);
+    }
 }
 ?>
-
-
-
