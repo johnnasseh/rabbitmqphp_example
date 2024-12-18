@@ -5,7 +5,7 @@ require_once('get_host_info.inc');
 require_once('rabbitMQLib.inc');
 require_once('deploy_mysqlconnect.php');
 
-function handleVersionAndRegister($bundleName, $path) {
+function handleVersionAndRegister($bundleName, $remotePath) {
     $db = getDeployDB();
 
     $db->begin_transaction();
@@ -16,8 +16,10 @@ function handleVersionAndRegister($bundleName, $path) {
     $row = $result->fetch_assoc();
     $version = ($row['max_version'] ?? 0) + 1;
 
+    $pathWithVersion = "{$remotePath}{$bundleName}_v{$version}.tar.gz";
+
     $register = $db->prepare("INSERT INTO Bundles (bundle_name, version, status, path) VALUES (?, ?, 'new', ?)");
-    $register->bind_param('sis', $bundleName, $version, $path);
+    $register->bind_param('sis', $bundleName, $version, $pathWithVersion);
     $register->execute();
 
     $db->commit();
@@ -34,4 +36,4 @@ function requestProcessor($request) {
 
 $server = new rabbitMQServer("testRabbitMQ.ini", "deploymentMQ");
 $server->process_requests('requestProcessor');
-?>
+
