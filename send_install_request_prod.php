@@ -18,7 +18,7 @@ $request = [
     'bundle_name' => $bundleName,
     'version' => $version,
     'deploy_server' => '10.147.17.182',
-    'local_path' => '/var/qa/bundles',
+    'local_path' => '/var/prod/bundles',
     'username' => 'omarh',
     'ssh_key' => '../../.ssh/id_rsa'
 ];
