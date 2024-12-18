@@ -11,7 +11,7 @@ if ($argc < 3) {
 $bundleName = $argv[1];
 $version = (int)$argv[2];
 
-$client = new rabbitMQClient("testRabbitMQ.ini", "installMQ");
+$client = new rabbitMQClient("testRabbitMQ.ini", "installprodMQ");
 
 $request = [
     'type' => 'install_bundle',
