@@ -20,7 +20,7 @@ function getLatestPassedVersion($bundleName) {
 }
 
 if ($argc < 2) {
-    echo "Use: php rollback_prod.php (bundle_name)\n";
+    echo "Use: php rollback_qa.php (bundle_name)\n";
     exit(1);
 }
 
@@ -32,6 +32,8 @@ if ($latestVersion === null) {
     exit(1);
 }
 
+$installPath = '/var/www/html';
+
 $client = new rabbitMQClient("testRabbitMQ.ini", "installprodMQ");
 $request = [
     'type' => 'install_bundle',
@@ -39,10 +41,24 @@ $request = [
     'version' => $latestVersion,
     'deploy_server' => '10.147.17.182',
     'local_path' => '/var/prod/bundles',
+    'install_path' => $installPath,
     'username' => 'omarh',
     'ssh_key' => '../../.ssh/id_rsa',
 ];
 
 $response = $client->send_request($request);
+
 echo "Response: " . print_r($response, true) . "\n";
+
+// restart apache
+if ($response['status'] === 'success') {
+    $restartCommand = "sudo systemctl restart apache2";
+    exec($restartCommand, $restartOutput, $restartReturnVar);
+
+    if ($restartReturnVar === 0) {
+        echo "Apache restarted successfully.\n";
+    } else {
+        echo "Failed to restart Apache: " . implode("\n", $restartOutput) . "\n";
+    }
+}
 ?>
