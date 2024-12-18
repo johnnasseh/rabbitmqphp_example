@@ -3,21 +3,22 @@ require_once('path.inc');
 require_once('get_host_info.inc');
 require_once('rabbitMQLib.inc');
 
-function markLatestBundleAsPassed() {
-    $client = new rabbitMQClient("testRabbitMQ.ini", "markingMQ");
-
-    $request = [
-        'type' => 'mark_latest_as_passed'
-    ];
-
-    $response = $client->send_request($request);
-
-    if ($response['status'] === 'success') {
-        echo "Bundle successfully marked as 'passed': " . $response['bundle_name'] . "\n";
-    } else {
-        echo "Failed to mark bundle as 'passed': " . $response['message'] . "\n";
-    }
+if ($argc < 3) {
+    echo "Use: php pass_bundle.php (bundle_name) (version)\n";
+    exit(1);
 }
 
-markLatestBundleAsPassed();
+$bundleName = $argv[1];
+$version = (int)$argv[2];
+
+$client = new rabbitMQClient("testRabbitMQ.ini", "markingMQ");
+$request = [
+    'type' => 'mark_bundle',
+    'bundle_name' => $bundleName,
+    'version' => $version,
+    'status' => 'passed'
+];
+
+$response = $client->send_request($request);
+echo "Response: " . print_r($response, true) . "\n";
 ?>
