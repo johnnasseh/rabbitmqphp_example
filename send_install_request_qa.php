@@ -12,17 +12,18 @@ $bundleName = $argv[1];
 $version = (int)$argv[2];
 
 $client = new rabbitMQClient("testRabbitMQ.ini", "installMQ");
+
 $request = [
     'type' => 'install_bundle',
     'bundle_name' => $bundleName,
     'version' => $version,
     'deploy_server' => '10.242.1.158',
-    'deploy_path' => '/var/deploy/bundles',
     'local_path' => '/var/qa/bundles',
     'username' => 'omarh',
-    'ssh_key' => '../../.ssh/id_rsa',
+    'ssh_key' => '../../.ssh/id_rsa'
 ];
 
 $response = $client->send_request($request);
 echo "Response: " . print_r($response, true) . "\n";
 ?>
+
