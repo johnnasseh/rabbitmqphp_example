@@ -2,77 +2,47 @@
 require_once('path.inc');
 require_once('get_host_info.inc');
 require_once('rabbitMQLib.inc');
+require_once('deploy_mysqlconnect.php');
 
-function transferBundleFromDeploy($bundleName, $deployServer, $deployPath, $qaPath, $username, $sshKey) {
-    $command = "scp -i $sshKey $username@$deployServer:$deployPath/$bundleName $qaPath";
-    echo "Executing SCP command: $command\n";
-
-    exec($command, $output, $returnVar);
-    if ($returnVar === 0) {
-        echo "Bundle successfully transferred to QA: $bundleName\n";
-        return true;
+function getLatestPassedVersion($bundleName) {
+    $db = getDeployDB();
+    
+    $query = $db->prepare("SELECT version FROM Bundles WHERE bundle_name = ? AND status = 'passed' ORDER BY version DESC LIMIT 1");
+    $query->bind_param('s', $bundleName);
+    $query->execute();
+    $result = $query->get_result();
+    
+    if ($row = $result->fetch_assoc()) {
+        return $row['version'];
     } else {
-        echo "Failed to transfer bundle: " . implode("\n", $output) . "\n";
-        return false;
-    }
-}
-
-function installBundleOnQA($bundleName, $qaPath) {
-    // install directory on qa
-    $installPath = '/var/bundletest';
-    $bundlePath = $qaPath . '/' . $bundleName;
-
-    $zip = new ZipArchive();
-    if ($zip->open($bundlePath) === TRUE) {
-        $zip->extractTo($installPath);
-        $zip->close();
-        unlink($bundlePath);
-        echo "Bundle rolled back and installed successfully on QA.\n";
-        return true;
-    } else {
-        echo "Failed to extract bundle on QA.\n";
-        return false;
-    }
-}
-
-function fetchPreviousPassedBundle() {
-    $client = new rabbitMQClient("testRabbitMQ.ini", "installMQ");
-
-    $request = [
-        'type' => 'fetch_previous_passed_bundle',
-    ];
-
-    $response = $client->send_request($request);
-
-    if ($response['status'] === 'success') {
-        return $response['bundle'];
-    } else {
-        echo "Failed to fetch previous passed bundle metadata: " . $response['message'] . "\n";
         return null;
     }
 }
 
-// scp things
-// deploy vm ip
-$deployServer = '10.242.1.158';
-$deployPath = '/var/deploy/bundles';
-$qaPath = '/var/qa/bundles';
-// ssh username for deploy
-$username = 'omarh';
-// ssh key path
-$sshKey = '../../.ssh/id_rsa';
-
-$previousBundle = fetchPreviousPassedBundle();
-
-if ($previousBundle) {
-    echo "Previous bundle to rollback: " . $previousBundle['bundle_name'] . "\n";
-
-    if (transferBundleFromDeploy($previousBundle['bundle_name'], $deployServer, $deployPath, $qaPath, $username, $sshKey)) {
-        if (installBundleOnQA($previousBundle['bundle_name'], $qaPath)) {
-            echo "Rollback successful on QA.\n";
-        } else {
-            echo "Failed to install previous bundle on QA.\n";
-        }
-    }
+if ($argc < 2) {
+    echo "Use: php rollback_qa.php (bundle_name)\n";
+    exit(1);
 }
+
+$bundleName = $argv[1];
+$latestVersion = getLatestPassedVersion($bundleName);
+
+if ($latestVersion === null) {
+    echo "Error: No 'passed' version found for bundle '$bundleName'.\n";
+    exit(1);
+}
+
+$client = new rabbitMQClient("testRabbitMQ.ini", "installMQ");
+$request = [
+    'type' => 'install_bundle',
+    'bundle_name' => $bundleName,
+    'version' => $latestVersion,
+    'deploy_server' => '10.242.1.158',
+    'local_path' => '/var/qa/bundles',
+    'username' => 'omarh',
+    'ssh_key' => '../../.ssh/id_rsa',
+];
+
+$response = $client->send_request($request);
+echo "Response: " . print_r($response, true) . "\n";
 ?>
