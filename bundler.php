@@ -5,22 +5,41 @@ require_once('rabbitMQLib.inc');
 
 function getBundleNameFromArgs($argv) {
     if (count($argv) < 2) {
-        echo "Error: Please provide a bundle name as the first argument.\n";
-        echo "Usage: php bundler.php <bundle_name>\n";
+        echo "Error: Provide a bundle name first.\n";
+        echo "Usage: php bundler.php (bundle_name)\n";
         exit(1);
     }
     return $argv[1];
 }
 
-function getModifiedFiles() {
-    $command = "git diff --name-only HEAD~1";
-    exec($command, $output, $returnVar);
-    if ($returnVar === 0) {
-        return $output;
-    } else {
-        echo "Error fetching modified files: " . implode("\n", $output) . "\n";
-        return [];
+function calculateChecksums($directory) {
+    $checksums = [];
+    $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($directory));
+
+    foreach ($iterator as $file) {
+        if ($file->isFile()) {
+            $filePath = $file->getPathname();
+            $checksums[$filePath] = hash_file('sha256', $filePath);
+        }
     }
+    return $checksums;
+}
+
+function getModifiedFilesByChecksum($directory, $checksumFile) {
+    $modifiedFiles = [];
+    $currentChecksums = calculateChecksums($directory);
+
+    $previousChecksums = file_exists($checksumFile) ? json_decode(file_get_contents($checksumFile), true) : [];
+
+    foreach ($currentChecksums as $filePath => $currentChecksum) {
+        if (!isset($previousChecksums[$filePath]) || $currentChecksum !== $previousChecksums[$filePath]) {
+            $modifiedFiles[] = $filePath;
+        }
+    }
+
+    file_put_contents($checksumFile, json_encode($currentChecksums));
+
+    return $modifiedFiles;
 }
 
 function getDependencies($file) {
@@ -42,22 +61,10 @@ function getDependencies($file) {
         }
     }
 
-    if ($extension === 'html') {
-        $content = file_get_contents($file);
-        preg_match_all('/<link[^>]+href=["\']([^"\']+)["\']/', $content, $linkMatches);
-        $dependencies = array_merge($dependencies, $linkMatches[1]);
-
-        preg_match_all('/<script[^>]+src=["\']([^"\']+)["\']/', $content, $scriptMatches);
-        $dependencies = array_merge($dependencies, $scriptMatches[1]);
-
-        preg_match_all('/<img[^>]+src=["\']([^"\']+)["\']/', $content, $imgMatches);
-        $dependencies = array_merge($dependencies, $imgMatches[1]);
-    }
-
     return array_filter($dependencies, 'file_exists');
 }
 
-function createBundle($files, $bundleName) {
+function createBundle($files, $finalBundleName) {
     $tempDir = '/tmp/bundle_temp/';
     if (is_dir($tempDir)) {
         exec("rm -rf {$tempDir}");
@@ -65,7 +72,8 @@ function createBundle($files, $bundleName) {
     mkdir($tempDir, 0777, true);
 
     foreach ($files as $file) {
-        $dest = $tempDir . $file;
+        $relativePath = str_replace('/home/matt/project/rabbitmqphp_example/', '', $file);
+        $dest = $tempDir . $relativePath;
         $destDir = dirname($dest);
         if (!is_dir($destDir)) {
             mkdir($destDir, 0777, true);
@@ -73,7 +81,7 @@ function createBundle($files, $bundleName) {
         copy($file, $dest);
     }
 
-    $bundlePath = "/tmp/{$bundleName}.tar.gz";
+    $bundlePath = "/tmp/{$finalBundleName}.tar.gz";
     $command = "tar -czvf $bundlePath -C $tempDir .";
     exec($command, $output, $returnVar);
 
@@ -88,12 +96,12 @@ function createBundle($files, $bundleName) {
     }
 }
 
-function registerAndVersionBundle($bundleName, $path) {
+function getNextVersionAndRegister($bundleName, $remotePath) {
     $client = new rabbitMQClient("testRabbitMQ.ini", "deploymentMQ");
     $request = [
         'type' => 'get_version_and_register',
         'bundle_name' => $bundleName,
-        'path' => $path,
+        'path' => $remotePath
     ];
     $response = $client->send_request($request);
     if ($response['status'] === 'success') {
@@ -117,8 +125,11 @@ function transferBundleWithSCP($bundlePath, $remoteServer, $remotePath, $usernam
 }
 
 $bundleName = getBundleNameFromArgs($argv);
+// change directory for other vms
+$projectDirectory = '/home/matt/project/rabbitmqphp_example';
+$checksumFile = '/etc/deploy/checksums.json';
 
-$modifiedFiles = getModifiedFiles();
+$modifiedFiles = getModifiedFilesByChecksum($projectDirectory, $checksumFile);
 if (empty($modifiedFiles)) {
     echo "No modified files found.\n";
     exit;
@@ -131,17 +142,19 @@ foreach ($modifiedFiles as $file) {
 }
 $allFiles = array_unique($allFiles);
 
-// scp values
 $remoteServer = '192.168.194.182';
 $remotePath = '/var/deploy/bundles/';
 $username = 'omarh';
 $sshKey = '../../.ssh/id_rsa';
 
-$bundlePath = createBundle($allFiles, $bundleName);
+$version = getNextVersionAndRegister($bundleName, $remotePath);
+$finalBundleName = "{$bundleName}_v{$version}";
+$finalPath = "{$remotePath}{$finalBundleName}.tar.gz";
+
+$bundlePath = createBundle($allFiles, $finalBundleName);
 if ($bundlePath) {
     if (transferBundleWithSCP($bundlePath, $remoteServer, $remotePath, $username, $sshKey)) {
-        $version = registerAndVersionBundle($bundleName, $remotePath . basename($bundlePath));
-        echo "Bundle successfully registered with version: $version\n";
+        echo "Bundle successfully registered and transferred: {$finalBundleName}\n";
     }
 }
-?>
+
