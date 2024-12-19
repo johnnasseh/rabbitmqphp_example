@@ -1,6 +1,6 @@
 <?php
 require_once('vendor/autoload.php');
-require('nav.php');
+//require('nav.php');
 require_once('mysqlconnect.php');
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
