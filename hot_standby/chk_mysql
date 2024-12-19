@@ -1,0 +1,16 @@
+#!/bin/bash
+
+MYSQL_USER="replica"
+MYSQL_PASS="replica1"
+
+LOGFILE="/var/log/check_mysql.log"
+
+mysqladmin -h 192.168.194.225 -u "$MYSQL_USER" -p"$MYSQL_PASS" ping > "$LOGFILE" 2>&1
+if [ $? -ne 0 ]; then
+        echo "$(date): MySQL is DOWN" >> "$LOGFILE"
+        echo "$(cat $LOGFILE)" >> "$LOGFILE"
+        exit 1
+else
+        echo "$(date): MySQL is UP" >> "$LOGFILE"
+    exit 0
+fi
