@@ -8,7 +8,7 @@ $env = parse_ini_file('.env');
 $jwt_secret = $env['JWT_SECRET'] ?? '';
 $username = "";
 
-// Token verification and decoding for POST requests
+
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 	$token = $_POST['token'] ?? '';
 	if (!$token) {
@@ -116,5 +116,3 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 	</script>
 </body>
 </html>
-
-
