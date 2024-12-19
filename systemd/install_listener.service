@@ -7,7 +7,7 @@ Type=simple
 Restart=always
 RestartSec=1
 User=matt
-ExecStart=/home/matt/project/rabbitmqphp_example/install_handler.php
+ExecStart=/home/mattqa/project/rabbitmqphp_example/install_listener.php
 
 [Install]
 WantedBy=multi-user.target
