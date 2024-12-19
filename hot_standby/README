@@ -1,0 +1,62 @@
+Hot Standby server:
+
+To setup the hot standby machines keepalived was used
+The documentation on the program:
+https://keepalived.readthedocs.io/en/latest/ 
+
+In the shell you type:
+
+sudo apt install keepalived
+
+sudo apt install libipset13
+
+Then you create of conf file with
+
+sudo vim etc/keepalived/keepalived.conf
+
+Then the conf file is structured like this
+
+
+
+global_defs {
+script_user root
+enable_script_security
+}
+vrrp_script chk_mysql {
+    script "/usr/local/bin/check_mysql.sh" # path to health check script
+    interval 2
+    weight -20                        # decrease priority if check fails
+}
+
+
+vrrp_instance name {                  #name has to match between paired machines
+    state MASTER        #MASTER for main machine BACKUP for backup
+    interface zth6rkm5gu
+    virtual_router_id 51               # must be the same on both servers
+    priority 100                       # higher priority means it's the primary but higher priority is tied to lower number
+    advert_int 1
+    unicast_src_ip 127.000.000.001      #ip of your machine
+    unicast_peer {
+        127.000.000.002             #ip of paired machine
+}
+
+    authentication {
+        auth_type PASS
+        auth_pass password              #password is max 8 characters
+    }
+    virtual_ipaddress {
+        127.000.000.003                # virtual ip that your application will connect to
+    }
+    track_script {
+        chk_mysql                      # health check script
+    }
+}
+
+
+Afterwards do 
+
+Sudo systemctl enable keepalived
+
+To start it on startup
+
+If 1 pc goes down then the designated backup will take over the designated virtual ip from this conf file. The backup will stay the main until the main is available to go up again since it has a lower priority
