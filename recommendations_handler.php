@@ -5,6 +5,11 @@ require_once('get_host_info.inc');
 require_once('rabbitMQLib.inc');
 require_once('mysqlconnect.php');
 
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL & ~E_DEPRECATED);
+
+
 $env = parse_ini_file('.env');
 $apiKey = $env['HASDATA_API']; 
 $mydb = getDB();
