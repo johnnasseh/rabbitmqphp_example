@@ -12,37 +12,37 @@ $jwt_secret = $env['JWT_SECRET'] ?? '';
 $client = new rabbitMQClient("testRabbitMQ.ini", "followMQ");
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-	$type = $_POST['type'] ?? '';
-	$token = $_POST['token'] ?? '';
-	$query = $_POST['query'] ?? '';
-	$artist_id = $_POST['artist_id'] ?? '';
-	$artist_name = $_POST['artist_name'] ?? '';
+    $type = $_POST['type'] ?? '';
+    $token = $_POST['token'] ?? '';
+    $query = $_POST['query'] ?? '';
+    $artist_id = $_POST['artist_id'] ?? '';
+    $artist_name = $_POST['artist_name'] ?? '';
 
-	try {
-    	$decoded = JWT::decode($token, new Key($jwt_secret, 'HS256'));
-    	$username = $decoded->data->username;
-	} catch (Exception $e) {
-    	echo json_encode(["status" => "fail", "message" => "Invalid or expired token"]);
-    	exit;
-	}
+    try {
+        $decoded = JWT::decode($token, new Key($jwt_secret, 'HS256'));
+        $username = $decoded->data->username;
+    } catch (Exception $e) {
+        echo json_encode(["status" => "fail", "message" => "Invalid or expired token"]);
+        exit;
+    }
 
-	$request = ["type" => $type, "username" => $username];
+    $request = ["type" => $type, "username" => $username];
 
-	if ($type === 'search') {
-    	$request['query'] = $query;
-	} elseif ($type === 'follow') {
-    	$request['artist_id'] = $artist_id;
-    	$request['artist_name'] = $artist_name;
-	} else {
-    	echo json_encode(["status" => "fail", "message" => "Invalid request type"]);
-    	exit;
-	}
+    if ($type === 'search') {
+        $request['query'] = $query;
+    } elseif ($type === 'follow') {
+        $request['artist_id'] = $artist_id;
+        $request['artist_name'] = $artist_name;
+    } else {
+        echo json_encode(["status" => "fail", "message" => "Invalid request type"]);
+        exit;
+    }
 
-	try {
-    	$response = $client->send_request($request);
-    	echo json_encode($response);
-	} catch (Exception $e) {
-    	echo json_encode(["status" => "fail", "message" => "Server error occurred"]);
-	}
+    try {
+        $response = $client->send_request($request);
+        echo json_encode($response);
+    } catch (Exception $e) {
+        echo json_encode(["status" => "fail", "message" => "Server error occurred"]);
+    }
 }
 ?>
