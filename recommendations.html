@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Event Recommendations</title>
+</head>
+<body>
+	<h1>Event Recommendations</h1>
+	<div id="recommendations">Loading recommendations...</div>
+
+	<script>
+    	function fetchRecommendations() {
+        	const token = localStorage.getItem('token');
+        	if (!token) {
+            	document.getElementById("recommendations").innerHTML = "You must be logged in to view recommendations.";
+            	return;
+        	}
+
+        	fetch('recommendation_sender.php', {
+            	method: 'POST',
+            	headers: { 'Content-Type': 'application/json' },
+            	body: JSON.stringify({ token: token })
+        	})
+        	.then(response => response.json())
+        	.then(data => {
+            	console.log("Received data:", data); // Log response for debugging
+            	if (data.status === "success" && data.recommendations.length > 0) {
+                	const recommendationsList = data.recommendations.map(event => `
+                    	<div>
+                        	<h3>${event.title}</h3>
+                        	<p>${event.description}</p>
+                        	<a href="${event.link}" target="_blank">More Info</a>
+                    	</div>
+                	`).join('');
+                	document.getElementById("recommendations").innerHTML = recommendationsList;
+            	} else {
+                	document.getElementById("recommendations").innerHTML = "No recommendations available at the moment.";
+            	}
+        	})
+        	.catch(error => {
+            	console.error("Error fetching recommendations:", error);
+            	document.getElementById("recommendations").innerHTML = "An error occurred while fetching recommendations.";
+        	});
+    	}
+
+    	window.onload = fetchRecommendations;
+	</script>
+</body>
+</html>
+
+
+
